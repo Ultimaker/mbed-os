@@ -102,10 +102,8 @@ int equeue_create_inplace(equeue_t *q, size_t size, void *buffer) {
 void equeue_destroy(equeue_t *q) {
     // call destructors on pending events
     for (struct equeue_event *es = q->queue; es; es = es->next) {
-        for (struct equeue_event *e = q->queue; e; e = e->sibling) {
-            if (e->dtor) {
-                e->dtor(e + 1);
-            }
+        if (es->dtor) {
+            es->dtor(es + 1);
         }
     }
 
@@ -134,12 +132,7 @@ static struct equeue_event *equeue_mem_alloc(equeue_t *q, size_t size) {
     for (struct equeue_event **p = &q->chunks; *p; p = &(*p)->next) {
         if ((*p)->size >= size) {
             struct equeue_event *e = *p;
-            if (e->sibling) {
-                *p = e->sibling;
-                (*p)->next = e->next;
-            } else {
-                *p = e->next;
-            }
+            *p = e->next;
 
             equeue_mutex_unlock(&q->memlock);
             return e;
@@ -171,13 +164,7 @@ static void equeue_mem_dealloc(equeue_t *q, struct equeue_event *e) {
         p = &(*p)->next;
     }
 
-    if (*p && (*p)->size == e->size) {
-        e->sibling = *p;
-        e->next = (*p)->next;
-    } else {
-        e->sibling = 0;
-        e->next = *p;
-    }
+    e->next = *p;
     *p = e;
 
     equeue_mutex_unlock(&q->memlock);
@@ -223,21 +210,9 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
     }
 
     // insert at head in slot
-    if (*p && (*p)->target == e->target) {
-        e->next = (*p)->next;
-        if (e->next) {
-            e->next->ref = &e->next;
-        }
-
-        e->sibling = *p;
-        e->sibling->ref = &e->sibling;
-    } else {
-        e->next = *p;
-        if (e->next) {
-            e->next->ref = &e->next;
-        }
-
-        e->sibling = 0;
+    e->next = *p;
+    if (e->next) {
+        e->next->ref = &e->next;
     }
 
     *p = e;
@@ -245,7 +220,7 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
 
     // notify background timer
     if ((q->background.update && q->background.active) &&
-        (q->queue == e && !e->sibling)) {
+        (q->queue == e)) {
         q->background.update(q->background.timer,
                 equeue_clampdiff(e->target, tick));
     }
@@ -277,19 +252,9 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
     }
 
     // disentangle from queue
-    if (e->sibling) {
-        e->sibling->next = e->next;
-        if (e->sibling->next) {
-            e->sibling->next->ref = &e->sibling->next;
-        }
-
-        *e->ref = e->sibling;
-        e->sibling->ref = e->ref;
-    } else {
-        *e->ref = e->next;
-        if (e->next) {
-            e->next->ref = e->ref;
-        }
+    *e->ref = e->next;
+    if (e->next) {
+        e->next->ref = e->ref;
     }
 
     equeue_incid(q, e);
@@ -330,10 +295,8 @@ static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
         ess = es->next;
 
         struct equeue_event *prev = 0;
-        for (struct equeue_event *e = es; e; e = e->sibling) {
-            e->next = prev;
-            prev = e;
-        }
+        es->next = prev;
+        prev = es;
 
         *tail = prev;
         tail = &es->next;
