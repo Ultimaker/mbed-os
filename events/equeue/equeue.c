@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 #include "equeue/equeue.h"
+#include "mbed_assert.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -238,6 +239,8 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
     equeue_mutex_lock(&q->queuelock);
     if (e->id != id >> q->npw2) {
         equeue_mutex_unlock(&q->queuelock);
+        // Invalid id
+        MBED_ASSERT(0);
         return 0;
     }
 
