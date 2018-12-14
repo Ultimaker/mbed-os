@@ -244,15 +244,31 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
         return 0;
     }
 
+    // Find event to unqueue in the pending events list
+    // This works only for single shot events, and periodic events must never be cancelled
+    MBED_ASSERT(e->period == -1); // Not allowed to cancel periodic events
+    struct equeue_event *event = q->queue;
+    while (event)
+    {
+        // Check event
+        if (event->id == e->id)
+        {
+            // Cancel event e
+            break;
+        }
+        // Next event
+        event = event->next;
+        // If e is not found in the queued event list then ignore unqueueing
+        if (!event)
+        {
+            equeue_mutex_unlock(&q->queuelock);
+            return 0;
+        }
+    }
+
     // clear the event and check if already in-flight
     e->cb = 0;
     e->period = -1;
-
-    int diff = equeue_tickdiff(e->target, q->tick);
-    if (diff < 0 || (diff == 0 && e->generation != q->generation)) {
-        equeue_mutex_unlock(&q->queuelock);
-        return 0;
-    }
 
     // disentangle from queue
     *e->ref = e->next;
