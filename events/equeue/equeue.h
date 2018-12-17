@@ -77,6 +77,9 @@ typedef struct equeue {
         void *timer;
     } background;
 
+    uint32_t nr_cancelled_periodic_events; //! Counter for cancellation of periodic events
+    uint32_t nr_cancelled_invalid_ids; //! Counter for cancellation of invalid events
+
     equeue_sema_t eventsema;
     equeue_mutex_t queuelock;
     equeue_mutex_t memlock;

@@ -80,6 +80,9 @@ int equeue_create_inplace(equeue_t *q, size_t size, void *buffer) {
     q->background.update = 0;
     q->background.timer = 0;
 
+    q->nr_cancelled_periodic_events; ///! Counter for cancellation of periodic events
+    q->nr_cancelled_invalid_ids; ///! Counter for cancellation of invalid events
+
     // initialize platform resources
     int err;
     err = equeue_sema_create(&q->eventsema);
@@ -238,15 +241,22 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
 
     equeue_mutex_lock(&q->queuelock);
     if (e->id != id >> q->npw2) {
-        equeue_mutex_unlock(&q->queuelock);
         // Invalid id
-        MBED_ASSERT(0);
+        q->nr_cancelled_invalid_ids++;
+        equeue_mutex_unlock(&q->queuelock);
+        return 0;
+    }
+
+    // Not allowed to cancel periodic events
+    if (e->period != -1)
+    {
+        q->nr_cancelled_periodic_events++;
+        equeue_mutex_unlock(&q->queuelock);
         return 0;
     }
 
     // Find event to unqueue in the pending events list
     // This works only for single shot events, and periodic events must never be cancelled
-    MBED_ASSERT(e->period == -1); // Not allowed to cancel periodic events
     struct equeue_event *event = q->queue;
     while (event)
     {
