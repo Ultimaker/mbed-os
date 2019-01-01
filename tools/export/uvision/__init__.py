@@ -121,7 +121,7 @@ class Uvision(Exporter):
     TOOLCHAIN = 'ARM'
     TARGETS = []
     for target, obj in TARGET_MAP.iteritems():
-        if not ("ARM" in obj.supported_toolchains and hasattr(obj, "device_name")):
+        if "ARM" not in obj.supported_toolchains:
             continue
         if not DeviceCMSIS.check_supported(target):
             continue
@@ -166,7 +166,7 @@ class Uvision(Exporter):
         # Flag is invalid if set in template
         # Optimizations are also set in the template
         invalid_flag = lambda x: x in template or re.match("-O(\d|time)", x) 
-        flags['c_flags'] = [flag for flag in c_flags if not invalid_flag(flag)]
+        flags['c_flags'] = [flag.replace('"','\\"') for flag in c_flags if not invalid_flag(flag)]
         flags['c_flags'] = " ".join(flags['c_flags'])
         return flags
 
@@ -209,8 +209,12 @@ class Uvision(Exporter):
         }
         core = ctx['device'].core
         ctx['cputype'] = core.rstrip("FD")
-        # Turn on FPU optimizations if the core has an FPU
-        ctx['fpu_setting'] = 1 if 'F' not in core or 'D' in core else 2
+        if core.endswith("FD"):
+            ctx['fpu_setting'] = 3
+        elif core.endswith("F"):
+            ctx['fpu_setting'] = 2
+        else:
+            ctx['fpu_setting'] = 1
         ctx['fputype'] = self.format_fpu(core)
         ctx.update(self.format_flags())
         self.gen_file('uvision/uvision.tmpl', ctx, self.project_name+".uvprojx")

@@ -32,7 +32,6 @@ __all__ = ["target", "TARGETS", "TARGET_MAP", "TARGET_NAMES", "CORE_LABELS",
            "CUMULATIVE_ATTRIBUTES", "get_resolution_order"]
 
 CORE_LABELS = {
-    "ARM7TDMI-S": ["ARM7", "LIKE_CORTEX_ARM7"],
     "Cortex-M0" : ["M0", "CORTEX_M", "LIKE_CORTEX_M0"],
     "Cortex-M0+": ["M0P", "CORTEX_M", "LIKE_CORTEX_M0"],
     "Cortex-M1" : ["M1", "CORTEX_M", "LIKE_CORTEX_M1"],
@@ -386,12 +385,9 @@ class TEENSY3_1Code(object):
     @staticmethod
     def binary_hook(t_self, resources, elf, binf):
         """Hook that is run after elf is generated"""
-        from intelhex import IntelHex
-        binh = IntelHex()
-        binh.loadbin(binf, offset=0)
-
-        with open(binf.replace(".bin", ".hex"), "w") as file_desc:
-            binh.tofile(file_desc, format='hex')
+        # This function is referenced by old versions of targets.json and should
+        # be kept for backwards compatibility.
+        pass
 
 class MTSCode(object):
     """Generic MTS code"""
@@ -475,7 +471,11 @@ class MCU_NRF51Code(object):
         # Merge user code with softdevice
         from intelhex import IntelHex
         binh = IntelHex()
-        binh.loadbin(binf, offset=softdevice_and_offset_entry['offset'])
+        _, ext = os.path.splitext(binf)
+        if ext == ".hex":
+            binh.loadhex(binf)
+        elif ext == ".bin":
+            binh.loadbin(binf, softdevice_and_offset_entry['offset'])
 
         if t_self.target.MERGE_SOFT_DEVICE is True:
             t_self.debug("Merge SoftDevice file %s"
@@ -489,7 +489,7 @@ class MCU_NRF51Code(object):
             binh.merge(blh)
 
         with open(binf.replace(".bin", ".hex"), "w") as fileout:
-            binh.tofile(fileout, format='hex')
+            binh.write_hex_file(fileout, write_start_addr=False)
 
 class NCS36510TargetCode:
     @staticmethod
@@ -497,6 +497,13 @@ class NCS36510TargetCode:
         from tools.targets.NCS import add_fib_at_start
         print("binf ", binf)
         add_fib_at_start(binf[:-4])
+
+class RTL8195ACode:
+    """RTL8195A Hooks"""
+    @staticmethod
+    def binary_hook(t_self, resources, elf, binf):
+        from tools.targets.REALTEK_RTL8195AM import rtl8195a_elf2bin
+        rtl8195a_elf2bin(t_self.name, elf, binf)
 ################################################################################
 
 # Instantiate all public targets
