@@ -19,7 +19,7 @@
 #include "cmsis.h"
 #include "PeripheralNames.h"
 #include "nrf_delay.h"
-#include "toolchain.h"
+#include "mbed_toolchain.h"
 
 /*
  * Note: The micro-second timer API on the nRF51 platform is implemented using
@@ -283,6 +283,11 @@ void us_ticker_set_interrupt(timestamp_t timestamp)
         us_ticker_callbackPending = true;
         rtc1_enableCompareInterrupt();
     }
+}
+
+void us_ticker_fire_interrupt(void)
+{
+    NVIC_SetPendingIRQ(RTC1_IRQn);
 }
 
 void us_ticker_disable_interrupt(void)

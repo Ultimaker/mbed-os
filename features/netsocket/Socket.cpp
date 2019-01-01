@@ -42,7 +42,7 @@ nsapi_error_t Socket::open(NetworkStack *stack)
     }
 
     _socket = socket;
-    _event.attach(this, &Socket::event);
+    _event = callback(this, &Socket::event);
     _stack->socket_attach(_socket, Callback<void()>::thunk, &_event);
 
     _lock.unlock();
@@ -69,6 +69,28 @@ nsapi_error_t Socket::close()
     _lock.unlock();
     return ret;
 }
+
+int Socket::modify_multicast_group(const SocketAddress &address, nsapi_socket_option_t socketopt)
+{
+    nsapi_ip_mreq_t mreq;
+
+    // Set up group address
+    mreq.imr_multiaddr = address.get_addr();
+    mreq.imr_interface = nsapi_addr_t();   // Default address, NSAPI_UNSPEC
+
+    return this->setsockopt(NSAPI_SOCKET, socketopt, &mreq, sizeof(mreq));
+}
+
+int Socket::join_multicast_group(const SocketAddress &address)
+{
+    return modify_multicast_group(address, NSAPI_ADD_MEMBERSHIP);
+}
+
+int Socket::leave_multicast_group(const SocketAddress &address)
+{
+    return modify_multicast_group(address, NSAPI_DROP_MEMBERSHIP);
+}
+
 
 nsapi_error_t Socket::bind(uint16_t port)
 {
@@ -149,11 +171,14 @@ nsapi_error_t Socket::getsockopt(int level, int optname, void *optval, unsigned 
 
 }
 
-void Socket::attach(Callback<void()> callback)
+void Socket::sigio(Callback<void()> callback)
 {
     _lock.lock();
-
     _callback = callback;
-
     _lock.unlock();
+}
+
+void Socket::attach(Callback<void()> callback)
+{
+    sigio(callback);
 }

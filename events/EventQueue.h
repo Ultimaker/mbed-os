@@ -19,12 +19,12 @@
 
 #include "equeue/equeue.h"
 #include "platform/Callback.h"
+#include "platform/NonCopyable.h"
 #include <cstddef>
 #include <new>
 
 namespace events {
 /** \addtogroup events */
-/** @{*/
 
 /** EVENTS_EVENT_SIZE
  *  Minimum size of an event
@@ -46,8 +46,9 @@ class Event;
 /** EventQueue
  *
  *  Flexible event queue for dispatching events
+ * @ingroup events
  */
-class EventQueue {
+class EventQueue : private mbed::NonCopyable<EventQueue> {
 public:
     /** Create an EventQueue
      *
@@ -167,7 +168,6 @@ public:
      *  events out of irq contexts.
      *
      *  @param f        Function to execute in the context of the dispatch loop
-     *  @param a0..a4   Arguments to pass to the callback
      *  @return         A unique id that represents the posted event and can
      *                  be passed to cancel, or an id of 0 if there is not
      *                  enough memory to allocate the event.
@@ -185,7 +185,9 @@ public:
     }
 
     /** Calls an event on the queue
-     *  @see EventQueue::call
+     *  @see                    EventQueue::call
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0               Argument to pass to the callback
      */
     template <typename F, typename A0>
     int call(F f, A0 a0) {
@@ -193,7 +195,9 @@ public:
     }
 
     /** Calls an event on the queue
-     *  @see EventQueue::call
+     *  @see                    EventQueue::call
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1            Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1>
     int call(F f, A0 a0, A1 a1) {
@@ -201,7 +205,9 @@ public:
     }
 
     /** Calls an event on the queue
-     *  @see EventQueue::call
+     *  @see                    EventQueue::call
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2         Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1, typename A2>
     int call(F f, A0 a0, A1 a1, A2 a2) {
@@ -209,7 +215,9 @@ public:
     }
 
     /** Calls an event on the queue
-     *  @see EventQueue::call
+     *  @see                     EventQueue::call
+     *  @param f                 Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2,a3       Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1, typename A2, typename A3>
     int call(F f, A0 a0, A1 a1, A2 a2, A3 a3) {
@@ -217,7 +225,9 @@ public:
     }
 
     /** Calls an event on the queue
-     *  @see EventQueue::call
+     *  @see                    EventQueue::call
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2,a3,a4   Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1, typename A2, typename A3, typename A4>
     int call(F f, A0 a0, A1 a1, A2 a2, A3 a3, A4 a4) {
@@ -425,7 +435,6 @@ public:
      *  events out of irq contexts.
      *
      *  @param f        Function to execute in the context of the dispatch loop
-     *  @param a0..a4   Arguments to pass to the callback
      *  @param ms       Time to delay in milliseconds
      *  @return         A unique id that represents the posted event and can
      *                  be passed to cancel, or an id of 0 if there is not
@@ -445,7 +454,10 @@ public:
     }
 
     /** Calls an event on the queue after a specified delay
-     *  @see EventQueue::call_in
+     *  @see                        EventQueue::call_in
+     *  @param ms                   Time to delay in milliseconds
+     *  @param f                    Function to execute in the context of the dispatch loop
+     *  @param a0                   Argument to pass to the callback
      */
     template <typename F, typename A0>
     int call_in(int ms, F f, A0 a0) {
@@ -453,7 +465,10 @@ public:
     }
 
     /** Calls an event on the queue after a specified delay
-     *  @see EventQueue::call_in
+     *  @see                        EventQueue::call_in
+     *  @param ms                   Time to delay in milliseconds
+     *  @param f                    Function to execute in the context of the dispatch loop
+     *  @param a0,a1                Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1>
     int call_in(int ms, F f, A0 a0, A1 a1) {
@@ -461,7 +476,10 @@ public:
     }
 
     /** Calls an event on the queue after a specified delay
-     *  @see EventQueue::call_in
+     *  @see                        EventQueue::call_in
+     *  @param ms                   Time to delay in milliseconds
+     *  @param f                    Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2             Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1, typename A2>
     int call_in(int ms, F f, A0 a0, A1 a1, A2 a2) {
@@ -469,7 +487,10 @@ public:
     }
 
     /** Calls an event on the queue after a specified delay
-     *  @see EventQueue::call_in
+     *  @see                        EventQueue::call_in
+     *  @param ms                   Time to delay in milliseconds
+     *  @param f                    Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2,a3          Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1, typename A2, typename A3>
     int call_in(int ms, F f, A0 a0, A1 a1, A2 a2, A3 a3) {
@@ -477,7 +498,10 @@ public:
     }
 
     /** Calls an event on the queue after a specified delay
-     *  @see EventQueue::call_in
+     *  @see                        EventQueue::call_in
+     *  @param ms                   Time to delay in milliseconds
+     *  @param f                    Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2,a3,a4       Arguments to pass to the callback
      */
     template <typename F, typename A0, typename A1, typename A2, typename A3, typename A4>
     int call_in(int ms, F f, A0 a0, A1 a1, A2 a2, A3 a3, A4 a4) {
@@ -685,7 +709,6 @@ public:
      *  moving events out of irq contexts.
      *
      *  @param f        Function to execute in the context of the dispatch loop
-     *  @param a0..a4   Arguments to pass to the callback
      *  @param ms       Period of the event in milliseconds
      *  @return         A unique id that represents the posted event and can
      *                  be passed to cancel, or an id of 0 if there is not
@@ -706,7 +729,10 @@ public:
     }
 
     /** Calls an event on the queue periodically
-     *  @see EventQueue::call_every
+     *  @see                    EventQueue::call_every
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0               Argument to pass to the callback
+     *  @param ms               Period of the event in milliseconds
      */
     template <typename F, typename A0>
     int call_every(int ms, F f, A0 a0) {
@@ -714,7 +740,10 @@ public:
     }
 
     /** Calls an event on the queue periodically
-     *  @see EventQueue::call_every
+     *  @see                    EventQueue::call_every
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1            Arguments to pass to the callback
+     *  @param ms               Period of the event in milliseconds
      */
     template <typename F, typename A0, typename A1>
     int call_every(int ms, F f, A0 a0, A1 a1) {
@@ -722,7 +751,10 @@ public:
     }
 
     /** Calls an event on the queue periodically
-     *  @see EventQueue::call_every
+     *  @see                    EventQueue::call_every
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2         Arguments to pass to the callback
+     *  @param ms               Period of the event in milliseconds
      */
     template <typename F, typename A0, typename A1, typename A2>
     int call_every(int ms, F f, A0 a0, A1 a1, A2 a2) {
@@ -730,7 +762,10 @@ public:
     }
 
     /** Calls an event on the queue periodically
-     *  @see EventQueue::call_every
+     *  @see                    EventQueue::call_every
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2,a3      Arguments to pass to the callback
+     *  @param ms               Period of the event in milliseconds
      */
     template <typename F, typename A0, typename A1, typename A2, typename A3>
     int call_every(int ms, F f, A0 a0, A1 a1, A2 a2, A3 a3) {
@@ -738,7 +773,10 @@ public:
     }
 
     /** Calls an event on the queue periodically
-     *  @see EventQueue::call_every
+     *  @see                    EventQueue::call_every
+     *  @param f                Function to execute in the context of the dispatch loop
+     *  @param a0,a1,a2,a3,a4   Arguments to pass to the callback
+     *  @param ms               Period of the event in milliseconds
      */
     template <typename F, typename A0, typename A1, typename A2, typename A3, typename A4>
     int call_every(int ms, F f, A0 a0, A1 a1, A2 a2, A3 a3, A4 a4) {
@@ -943,9 +981,8 @@ public:
      *  callback acts as the target for the event and is executed in the
      *  context of the event queue's dispatch loop once posted.
      *
-     *  @param f        Function to execute when the event is dispatched
-     *  @param a0..a4   Arguments to pass to the callback
-     *  @return         Event that will dispatch on the specific queue
+     *  @param func        Function to execute when the event is dispatched
+     *  @return            Event that will dispatch on the specific queue
      */
     template <typename R>
     Event<void()> event(R (*func)());
@@ -973,6 +1010,12 @@ public:
      */
     template <typename T, typename R>
     Event<void()> event(const volatile T *obj, R (T::*method)() const volatile);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R>
+    Event<void()> event(mbed::Callback<R()> cb);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1007,6 +1050,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename C0>
+    Event<void()> event(mbed::Callback<R(B0)> cb, C0 c0);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename C0, typename C1>
     Event<void()> event(R (*func)(B0, B1), C0 c0, C1 c1);
 
@@ -1033,6 +1082,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename C0, typename C1>
     Event<void()> event(const volatile T *obj, R (T::*method)(B0, B1) const volatile, C0 c0, C1 c1);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename C0, typename C1>
+    Event<void()> event(mbed::Callback<R(B0, B1)> cb, C0 c0, C1 c1);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1067,6 +1122,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename C0, typename C1, typename C2>
+    Event<void()> event(mbed::Callback<R(B0, B1, B2)> cb, C0 c0, C1 c1, C2 c2);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3>
     Event<void()> event(R (*func)(B0, B1, B2, B3), C0 c0, C1 c1, C2 c2, C3 c3);
 
@@ -1093,6 +1154,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3>
     Event<void()> event(const volatile T *obj, R (T::*method)(B0, B1, B2, B3) const volatile, C0 c0, C1 c1, C2 c2, C3 c3);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3>
+    Event<void()> event(mbed::Callback<R(B0, B1, B2, B3)> cb, C0 c0, C1 c1, C2 c2, C3 c3);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1127,6 +1194,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4>
+    Event<void()> event(mbed::Callback<R(B0, B1, B2, B3, B4)> cb, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename A0>
     Event<void(A0)> event(R (*func)(A0));
 
@@ -1153,6 +1226,12 @@ public:
      */
     template <typename T, typename R, typename A0>
     Event<void(A0)> event(const volatile T *obj, R (T::*method)(A0) const volatile);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename A0>
+    Event<void(A0)> event(mbed::Callback<R(A0)> cb);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1187,6 +1266,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename C0, typename A0>
+    Event<void(A0)> event(mbed::Callback<R(B0, A0)> cb, C0 c0);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0>
     Event<void(A0)> event(R (*func)(B0, B1, A0), C0 c0, C1 c1);
 
@@ -1213,6 +1298,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename C0, typename C1, typename A0>
     Event<void(A0)> event(const volatile T *obj, R (T::*method)(B0, B1, A0) const volatile, C0 c0, C1 c1);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0>
+    Event<void(A0)> event(mbed::Callback<R(B0, B1, A0)> cb, C0 c0, C1 c1);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1247,6 +1338,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename C0, typename C1, typename C2, typename A0>
+    Event<void(A0)> event(mbed::Callback<R(B0, B1, B2, A0)> cb, C0 c0, C1 c1, C2 c2);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0>
     Event<void(A0)> event(R (*func)(B0, B1, B2, B3, A0), C0 c0, C1 c1, C2 c2, C3 c3);
 
@@ -1273,6 +1370,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0>
     Event<void(A0)> event(const volatile T *obj, R (T::*method)(B0, B1, B2, B3, A0) const volatile, C0 c0, C1 c1, C2 c2, C3 c3);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0>
+    Event<void(A0)> event(mbed::Callback<R(B0, B1, B2, B3, A0)> cb, C0 c0, C1 c1, C2 c2, C3 c3);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1307,6 +1410,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0>
+    Event<void(A0)> event(mbed::Callback<R(B0, B1, B2, B3, B4, A0)> cb, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename A0, typename A1>
     Event<void(A0, A1)> event(R (*func)(A0, A1));
 
@@ -1333,6 +1442,12 @@ public:
      */
     template <typename T, typename R, typename A0, typename A1>
     Event<void(A0, A1)> event(const volatile T *obj, R (T::*method)(A0, A1) const volatile);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename A0, typename A1>
+    Event<void(A0, A1)> event(mbed::Callback<R(A0, A1)> cb);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1367,6 +1482,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename C0, typename A0, typename A1>
+    Event<void(A0, A1)> event(mbed::Callback<R(B0, A0, A1)> cb, C0 c0);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1>
     Event<void(A0, A1)> event(R (*func)(B0, B1, A0, A1), C0 c0, C1 c1);
 
@@ -1393,6 +1514,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1>
     Event<void(A0, A1)> event(const volatile T *obj, R (T::*method)(B0, B1, A0, A1) const volatile, C0 c0, C1 c1);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1>
+    Event<void(A0, A1)> event(mbed::Callback<R(B0, B1, A0, A1)> cb, C0 c0, C1 c1);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1427,6 +1554,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename C0, typename C1, typename C2, typename A0, typename A1>
+    Event<void(A0, A1)> event(mbed::Callback<R(B0, B1, B2, A0, A1)> cb, C0 c0, C1 c1, C2 c2);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1>
     Event<void(A0, A1)> event(R (*func)(B0, B1, B2, B3, A0, A1), C0 c0, C1 c1, C2 c2, C3 c3);
 
@@ -1453,6 +1586,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1>
     Event<void(A0, A1)> event(const volatile T *obj, R (T::*method)(B0, B1, B2, B3, A0, A1) const volatile, C0 c0, C1 c1, C2 c2, C3 c3);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1>
+    Event<void(A0, A1)> event(mbed::Callback<R(B0, B1, B2, B3, A0, A1)> cb, C0 c0, C1 c1, C2 c2, C3 c3);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1487,6 +1626,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0, typename A1>
+    Event<void(A0, A1)> event(mbed::Callback<R(B0, B1, B2, B3, B4, A0, A1)> cb, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename A0, typename A1, typename A2>
     Event<void(A0, A1, A2)> event(R (*func)(A0, A1, A2));
 
@@ -1513,6 +1658,12 @@ public:
      */
     template <typename T, typename R, typename A0, typename A1, typename A2>
     Event<void(A0, A1, A2)> event(const volatile T *obj, R (T::*method)(A0, A1, A2) const volatile);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename A0, typename A1, typename A2>
+    Event<void(A0, A1, A2)> event(mbed::Callback<R(A0, A1, A2)> cb);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1547,6 +1698,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename C0, typename A0, typename A1, typename A2>
+    Event<void(A0, A1, A2)> event(mbed::Callback<R(B0, A0, A1, A2)> cb, C0 c0);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2>
     Event<void(A0, A1, A2)> event(R (*func)(B0, B1, A0, A1, A2), C0 c0, C1 c1);
 
@@ -1573,6 +1730,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2>
     Event<void(A0, A1, A2)> event(const volatile T *obj, R (T::*method)(B0, B1, A0, A1, A2) const volatile, C0 c0, C1 c1);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2>
+    Event<void(A0, A1, A2)> event(mbed::Callback<R(B0, B1, A0, A1, A2)> cb, C0 c0, C1 c1);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1607,6 +1770,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename C0, typename C1, typename C2, typename A0, typename A1, typename A2>
+    Event<void(A0, A1, A2)> event(mbed::Callback<R(B0, B1, B2, A0, A1, A2)> cb, C0 c0, C1 c1, C2 c2);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2>
     Event<void(A0, A1, A2)> event(R (*func)(B0, B1, B2, B3, A0, A1, A2), C0 c0, C1 c1, C2 c2, C3 c3);
 
@@ -1633,6 +1802,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2>
     Event<void(A0, A1, A2)> event(const volatile T *obj, R (T::*method)(B0, B1, B2, B3, A0, A1, A2) const volatile, C0 c0, C1 c1, C2 c2, C3 c3);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2>
+    Event<void(A0, A1, A2)> event(mbed::Callback<R(B0, B1, B2, B3, A0, A1, A2)> cb, C0 c0, C1 c1, C2 c2, C3 c3);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1667,6 +1842,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0, typename A1, typename A2>
+    Event<void(A0, A1, A2)> event(mbed::Callback<R(B0, B1, B2, B3, B4, A0, A1, A2)> cb, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename A0, typename A1, typename A2, typename A3>
     Event<void(A0, A1, A2, A3)> event(R (*func)(A0, A1, A2, A3));
 
@@ -1693,6 +1874,12 @@ public:
      */
     template <typename T, typename R, typename A0, typename A1, typename A2, typename A3>
     Event<void(A0, A1, A2, A3)> event(const volatile T *obj, R (T::*method)(A0, A1, A2, A3) const volatile);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename A0, typename A1, typename A2, typename A3>
+    Event<void(A0, A1, A2, A3)> event(mbed::Callback<R(A0, A1, A2, A3)> cb);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1727,6 +1914,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename C0, typename A0, typename A1, typename A2, typename A3>
+    Event<void(A0, A1, A2, A3)> event(mbed::Callback<R(B0, A0, A1, A2, A3)> cb, C0 c0);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2, typename A3>
     Event<void(A0, A1, A2, A3)> event(R (*func)(B0, B1, A0, A1, A2, A3), C0 c0, C1 c1);
 
@@ -1753,6 +1946,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2, typename A3>
     Event<void(A0, A1, A2, A3)> event(const volatile T *obj, R (T::*method)(B0, B1, A0, A1, A2, A3) const volatile, C0 c0, C1 c1);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2, typename A3>
+    Event<void(A0, A1, A2, A3)> event(mbed::Callback<R(B0, B1, A0, A1, A2, A3)> cb, C0 c0, C1 c1);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1787,6 +1986,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename C0, typename C1, typename C2, typename A0, typename A1, typename A2, typename A3>
+    Event<void(A0, A1, A2, A3)> event(mbed::Callback<R(B0, B1, B2, A0, A1, A2, A3)> cb, C0 c0, C1 c1, C2 c2);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2, typename A3>
     Event<void(A0, A1, A2, A3)> event(R (*func)(B0, B1, B2, B3, A0, A1, A2, A3), C0 c0, C1 c1, C2 c2, C3 c3);
 
@@ -1813,6 +2018,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2, typename A3>
     Event<void(A0, A1, A2, A3)> event(const volatile T *obj, R (T::*method)(B0, B1, B2, B3, A0, A1, A2, A3) const volatile, C0 c0, C1 c1, C2 c2, C3 c3);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2, typename A3>
+    Event<void(A0, A1, A2, A3)> event(mbed::Callback<R(B0, B1, B2, B3, A0, A1, A2, A3)> cb, C0 c0, C1 c1, C2 c2, C3 c3);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1847,6 +2058,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0, typename A1, typename A2, typename A3>
+    Event<void(A0, A1, A2, A3)> event(mbed::Callback<R(B0, B1, B2, B3, B4, A0, A1, A2, A3)> cb, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(R (*func)(A0, A1, A2, A3, A4));
 
@@ -1873,6 +2090,12 @@ public:
      */
     template <typename T, typename R, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(const volatile T *obj, R (T::*method)(A0, A1, A2, A3, A4) const volatile);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename A0, typename A1, typename A2, typename A3, typename A4>
+    Event<void(A0, A1, A2, A3, A4)> event(mbed::Callback<R(A0, A1, A2, A3, A4)> cb);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1907,6 +2130,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename C0, typename A0, typename A1, typename A2, typename A3, typename A4>
+    Event<void(A0, A1, A2, A3, A4)> event(mbed::Callback<R(B0, A0, A1, A2, A3, A4)> cb, C0 c0);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(R (*func)(B0, B1, A0, A1, A2, A3, A4), C0 c0, C1 c1);
 
@@ -1933,6 +2162,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(const volatile T *obj, R (T::*method)(B0, B1, A0, A1, A2, A3, A4) const volatile, C0 c0, C1 c1);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename C0, typename C1, typename A0, typename A1, typename A2, typename A3, typename A4>
+    Event<void(A0, A1, A2, A3, A4)> event(mbed::Callback<R(B0, B1, A0, A1, A2, A3, A4)> cb, C0 c0, C1 c1);
 
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
@@ -1967,6 +2202,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename C0, typename C1, typename C2, typename A0, typename A1, typename A2, typename A3, typename A4>
+    Event<void(A0, A1, A2, A3, A4)> event(mbed::Callback<R(B0, B1, B2, A0, A1, A2, A3, A4)> cb, C0 c0, C1 c1, C2 c2);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(R (*func)(B0, B1, B2, B3, A0, A1, A2, A3, A4), C0 c0, C1 c1, C2 c2, C3 c3);
 
@@ -1997,6 +2238,12 @@ public:
     /** Creates an event bound to the event queue
      *  @see EventQueue::event
      */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename C0, typename C1, typename C2, typename C3, typename A0, typename A1, typename A2, typename A3, typename A4>
+    Event<void(A0, A1, A2, A3, A4)> event(mbed::Callback<R(B0, B1, B2, B3, A0, A1, A2, A3, A4)> cb, C0 c0, C1 c1, C2 c2, C3 c3);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
     template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(R (*func)(B0, B1, B2, B3, B4, A0, A1, A2, A3, A4), C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
 
@@ -2023,6 +2270,12 @@ public:
      */
     template <typename T, typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0, typename A1, typename A2, typename A3, typename A4>
     Event<void(A0, A1, A2, A3, A4)> event(const volatile T *obj, R (T::*method)(B0, B1, B2, B3, B4, A0, A1, A2, A3, A4) const volatile, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
+
+    /** Creates an event bound to the event queue
+     *  @see EventQueue::event
+     */
+    template <typename R, typename B0, typename B1, typename B2, typename B3, typename B4, typename C0, typename C1, typename C2, typename C3, typename C4, typename A0, typename A1, typename A2, typename A3, typename A4>
+    Event<void(A0, A1, A2, A3, A4)> event(mbed::Callback<R(B0, B1, B2, B3, B4, A0, A1, A2, A3, A4)> cb, C0 c0, C1 c1, C2 c2, C3 c3, C4 c4);
 
 protected:
     template <typename F>
@@ -2479,4 +2732,3 @@ protected:
 
 #endif
 
-/** @}*/

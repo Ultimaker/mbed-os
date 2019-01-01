@@ -24,7 +24,7 @@
 #include "netsocket/NetworkStack.h"
 #include "rtos/Mutex.h"
 #include "Callback.h"
-#include "toolchain.h"
+#include "mbed_toolchain.h"
 
 
 /** Abstract socket class
@@ -62,6 +62,20 @@ public:
      */
     nsapi_error_t close();
     
+    /** Subscribes to an IP multicast group
+     *
+     * @param address   Multicast group IP address
+     * @return          Negative error code on failure
+     */
+    int join_multicast_group(const SocketAddress &address);
+
+    /** Leave an IP multicast group
+     *
+     * @param address   Multicast group IP address
+     * @return          Negative error code on failure
+     */
+    int leave_multicast_group(const SocketAddress &address);
+
     /** Bind a specific address to a socket
      *
      *  Binding a socket specifies the address and port on which to recieve
@@ -163,22 +177,30 @@ public:
      *  The callback may be called in an interrupt context and should not
      *  perform expensive operations such as recv/send calls.
      *
+     *  Note! This is not intended as a replacement for a poll or attach-like
+     *  asynchronous api, but rather as a building block for constructing
+     *  such functionality. The exact timing of when the registered function
+     *  is called is not guaranteed and susceptible to change.
+     *
      *  @param func     Function to call on state change
      */
+    void sigio(mbed::Callback<void()> func);
+
+    /** Register a callback on state change of the socket
+     *
+     *  @see Socket::sigio
+     *  @deprecated
+     *      The behaviour of Socket::attach differs from other attach functions in
+     *      mbed OS and has been known to cause confusion. Replaced by Socket::sigio.
+     */
+    MBED_DEPRECATED_SINCE("mbed-os-5.4",
+        "The behaviour of Socket::attach differs from other attach functions in "
+        "mbed OS and has been known to cause confusion. Replaced by Socket::sigio.")
     void attach(mbed::Callback<void()> func);
 
     /** Register a callback on state change of the socket
      *
-     *  The specified callback will be called on state changes such as when
-     *  the socket can recv/send/accept successfully and on when an error
-     *  occurs. The callback may also be called spuriously without reason.
-     *
-     *  The callback may be called in an interrupt context and should not
-     *  perform expensive operations such as recv/send calls.
-     *
-     *  @param obj      Pointer to object to call method on
-     *  @param method   Method to call on state change
-     *
+     *  @see Socket::sigio
      *  @deprecated
      *      The attach function does not support cv-qualifiers. Replaced by
      *      attach(callback(obj, method)).
@@ -195,6 +217,7 @@ protected:
     Socket();
     virtual nsapi_protocol_t get_proto() = 0;
     virtual void event() = 0;
+    int modify_multicast_group(const SocketAddress &address, nsapi_socket_option_t socketopt);
 
     NetworkStack *_stack;
     nsapi_socket_t _socket;

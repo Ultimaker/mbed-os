@@ -9,12 +9,27 @@
 /* Version 4.2.0 */
 /*                                                                  */
 
+/* With the RTOS in use, this does not affect the main stack size. The size of
+ * the stack where main runs is determined via the RTOS. */
 STACK_SIZE = 0x400;
-HEAP_SIZE = 0xC00;
+
+/* This is the guaranteed minimum available heap size for an application. When
+ * uVisor is enabled, this is also the maximum available heap size. The
+ * HEAP_SIZE value is set by uVisor porters to balance the size of the legacy
+ * heap and the page heap in uVisor applications. */
+HEAP_SIZE = 0x6000;
+
+#if !defined(MBED_APP_START)
+  #define MBED_APP_START 0x00000000
+#endif
+
+#if !defined(MBED_APP_SIZE)
+  #define MBED_APP_SIZE 1048576
+#endif
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 1048576
+  FLASH (rx) : ORIGIN = MBED_APP_START, LENGTH = MBED_APP_SIZE
   RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 131072
 }
 /* MBED: mbed needs to be able to dynamically set the interrupt vector table.

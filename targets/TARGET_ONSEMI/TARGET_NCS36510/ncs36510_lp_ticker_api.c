@@ -34,12 +34,10 @@
 #include "device.h"
 #if DEVICE_LOWPOWERTIMER
 
-#include "sleep_api.h"
 #include "cmsis_nvic.h"
 #include "lp_ticker_api.h"
 #include "rtc.h"
 #include "rtc_map.h"
-#include "sleep.h"
 
 /* Initialize the RTC for low power ticker */
 void lp_ticker_init()
@@ -58,6 +56,11 @@ void lp_ticker_set_interrupt(timestamp_t timestamp)
 {
     /* The RTC Match register needs to be Set to the RTC alarm value */
     fRtcSetInterrupt(timestamp);
+}
+
+void lp_ticker_fire_interrupt(void)
+{
+    NVIC_SetPendingIRQ(Rtc_IRQn);
 }
 
 /** Disable low power ticker interrupt

@@ -1,9 +1,9 @@
 /***************************************************************************//**
  * @file em_common.h
  * @brief General purpose utilities.
- * @version 5.0.0
+ * @version 5.3.3
  *******************************************************************************
- * @section License
+ * # License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
@@ -107,20 +107,28 @@ extern "C" {
 /** MDK-ARM compiler: Macro for handling weak symbols. */
 #define SL_WEAK __attribute__ ((weak))
 
+/** MDK-ARM compiler: Macro for handling non-returning functions. */
+#define SL_NORETURN __attribute__ ((noreturn))
+
 /** MDK-ARM compiler: Macro for handling section placement */
 #define SL_ATTRIBUTE_SECTION(X) __attribute__ ((section(X)))
 #endif
 
 #if defined(__ICCARM__)
 /** @brief IAR Embedded Workbench: Macros for handling aligned structs. */
-#define SL_ALIGN(X) _Pragma(STRINGIZE(data_alignment=X))
+#define SL_ALIGN(X) _Pragma(STRINGIZE(data_alignment = X))
 
 /** @brief IAR Embedded Workbench: Macros for handling weak symbols. */
 #define SL_WEAK __weak
 
+/** @brief IAR Embedded Workbench: Macro for handling non-returning functions. */
+#define SL_NORETURN __noreturn
+
+/* *INDENT-OFF* */
 /** IAR Embedded Workbench: Macro for handling section placement */
 #define SL_ATTRIBUTE_SECTION(X) @ X
 #endif
+/* *INDENT-ON* */
 
 #define SL_ATTRIBUTE_ALIGN(X)
 
@@ -128,10 +136,10 @@ extern "C" {
 /* GCC compilers */
 
 /** @brief Macro for getting minimum value. No sideeffects, a and b are evaluated once only. */
-#define SL_MIN(a, b) __extension__({__typeof__(a) _a = (a); __typeof__(b) _b = (b); _a < _b ? _a : _b;})
+#define SL_MIN(a, b) __extension__({ __typeof__(a)_a = (a); __typeof__(b)_b = (b); _a < _b ? _a : _b; })
 
 /** @brief Macro for getting maximum value. No sideeffects, a and b are evaluated once only. */
-#define SL_MAX(a, b) __extension__({__typeof__(a) _a = (a); __typeof__(b) _b = (b); _a > _b ? _a : _b;})
+#define SL_MAX(a, b) __extension__({ __typeof__(a)_a = (a); __typeof__(b)_b = (b); _a > _b ? _a : _b; })
 
 /** @brief GCC style macro for handling packed structs. */
 #define SL_ATTRIBUTE_PACKED __attribute__ ((packed))
@@ -164,6 +172,9 @@ extern "C" {
 /** @brief Macro for defining a weak symbol. */
 #define SL_WEAK __attribute__ ((weak))
 
+/** @brief Macro for handling non-returning functions. */
+#define SL_NORETURN __attribute__ ((noreturn))
+
 /** Macro for placing a variable in a section.
  *  @n Use this macro after the variable definition, before the = or ;.
  *  @n X denotes the section to place the variable in.
@@ -174,13 +185,13 @@ extern "C" {
 
 /***************************************************************************//**
  * @brief
- *   Count trailing number of zero's. Use CLZ instruction if available.
+ *   Count trailing number of zeros. Use CLZ instruction if available.
  *
  * @param[in] value
  *   Data value to check for number of trailing zero bits.
  *
  * @return
- *   Number of trailing zero's in value.
+ *   Number of trailing zeros in value.
  ******************************************************************************/
 __STATIC_INLINE uint32_t SL_CTZ(uint32_t value)
 {
@@ -189,34 +200,62 @@ __STATIC_INLINE uint32_t SL_CTZ(uint32_t value)
 
 #else
   uint32_t zeros;
-  for(zeros=0; (zeros<32) && ((value&0x1) == 0); zeros++, value>>=1);
+  for (zeros = 0; (zeros < 32) && ((value & 0x1) == 0); zeros++, value >>= 1) {
+    ;
+  }
   return zeros;
 #endif
 }
 
-/***************************************************************************//**
- * @brief
- *   Count trailing number of zero's. Use CLZ instruction if available.
- *
- * @deprecated
- *   Deprecated function. New code should use @ref SL_CTZ().
-
- * @param[in] value
- *   Data value to check for number of trailing zero bits.
- *
- * @return
- *   Number of trailing zero's in value.
- ******************************************************************************/
+/* Deprecated function. New code should use @ref SL_CTZ. */
 __STATIC_INLINE uint32_t EFM32_CTZ(uint32_t value)
 {
-#if (__CORTEX_M >= 3)
-  return __CLZ(__RBIT(value));
+  return SL_CTZ(value);
+}
 
+/***************************************************************************//**
+ * @brief
+ *   Reverse the bits. Use the RBIT instruction if available, else process.
+ *
+ * @param[in] value
+ *   Data value to reverse.
+ *
+ * @return
+ *   Reversed value.
+ ******************************************************************************/
+__STATIC_INLINE uint32_t SL_RBIT(uint32_t value)
+{
+  uint32_t result;
+
+#if (__CORTEX_M >= 0x03U)
+  result = __RBIT(value);
 #else
-  uint32_t zeros;
-  for(zeros=0; (zeros<32) && ((value&0x1) == 0); zeros++, value>>=1);
-  return zeros;
+  int32_t s = 4 * 8 - 1;
+
+  result = value;
+  for (value >>= 1U; value; value >>= 1U) {
+    result <<= 1U;
+    result |= value & 1U;
+    s--;
+  }
+  result <<= s;
 #endif
+  return result;
+}
+
+/***************************************************************************//**
+ * @brief
+ *   Reverse the bits. Use the RBIT instruction if available, else process.
+ *
+ * @param[in] value
+ *   16-bit data value to reverse.
+ *
+ * @return
+ *   16-bit reversed value.
+ ******************************************************************************/
+__STATIC_INLINE uint32_t SL_RBIT16(uint32_t value)
+{
+  return SL_RBIT(value) >> 16;
 }
 
 /** @} (end addtogroup COMMON) */

@@ -24,7 +24,6 @@
 #include "ble_conn_params.h"
 
 #include "btle_gap.h"
-#include "btle_advertising.h"
 #include "custom/custom_helper.h"
 
 #include "ble/GapEvents.h"
@@ -52,11 +51,9 @@ extern "C" {
 }
 
 #include "nrf_ble_hci.h"
-#include "btle_discovery.h"
 
-#include "nRF5xGattClient.h"
-#include "nRF5xServiceDiscovery.h"
-#include "nRF5xCharacteristicDescriptorDiscoverer.h"
+#include "nRF5XPalGattClient.h"
+
 
 
 bool isEventsSignaled = false;
@@ -67,23 +64,6 @@ extern "C" void SD_EVT_IRQHandler(void); // export the softdevice event handler 
 
 
 static void btle_handler(ble_evt_t *p_ble_evt);
-
-#if 0
-#define CENTRAL_LINK_COUNT    (YOTTA_CFG_NORDIC_BLE_CENTRAL_LINKS)  /**<number of central links used by the application. When changing this number remember to adjust the RAM settings */
-                                                                       /** If value for YOTTA_CFG_NORDIC_BLE_PERIPHERAL_LINKS was used, ram settings are adjusted by the yotta target module. */
-#define PERIPHERAL_LINK_COUNT (YOTTA_CFG_NORDIC_BLE_PERIPHERAL_LINKS)     /**<number of peripheral links used by the application. When changing this number remember to adjust the RAM settings*/
-                                                                       /** If value for YOTTA_CFG_NORDIC_BLE_CENTRAL_LINKS was used, ram settings are adjusted by the yotta target module. */
-#define GATTS_ATTR_TAB_SIZE (YOTTA_CFG_NORDIC_BLE_GATTS_ATTR_TAB_SIZE) /**< GATTS attribite table size. */
-                                                                       /** If value for YOTTA_CFG_NORDIC_BLE_GATTS_ATTR_TAB_SIZE was used, ram settings are adjusted by the yotta target module. */
-#else
-#define CENTRAL_LINK_COUNT    3  /**<number of central links used by the application. When changing this number remember to adjust the RAM settings */
-                                                                       /** If value for YOTTA_CFG_NORDIC_BLE_PERIPHERAL_LINKS was used, ram settings are adjusted by the yotta target module. */
-#define PERIPHERAL_LINK_COUNT 1     /**<number of peripheral links used by the application. When changing this number remember to adjust the RAM settings*/
-                                                                       /** If value for YOTTA_CFG_NORDIC_BLE_CENTRAL_LINKS was used, ram settings are adjusted by the yotta target module. */
-#define GATTS_ATTR_TAB_SIZE 0x600 /**< GATTS attribite table size. */
-                                                                       /** If value for YOTTA_CFG_NORDIC_BLE_GATTS_ATTR_TAB_SIZE was used, ram settings are adjusted by the yotta target module. */
-
-#endif
 
 static void sys_evt_dispatch(uint32_t sys_evt)
 {
@@ -122,7 +102,7 @@ error_t btle_init(void)
 
     // register softdevice handler vector
     NVIC_SetVector(SD_EVT_IRQn, (uint32_t) SD_EVT_IRQHandler);
-    
+
     // Configure the LF clock according to values provided by btle_clock.h.
     // It is input from the chain of the yotta configuration system.
     clockConfiguration.source        = LFCLK_CONF_SOURCE;
@@ -165,6 +145,10 @@ error_t btle_init(void)
         return ERROR_INVALID_PARAM;
     }
 
+    // Peer Manger must been initialised prior any other call to its API (this file and btle_security_pm.cpp)
+    pm_init();
+
+#if  (NRF_SD_BLE_API_VERSION <= 2)
     ble_gap_addr_t addr;
     if (sd_ble_gap_address_get(&addr) != NRF_SUCCESS) {
         return ERROR_INVALID_PARAM;
@@ -172,6 +156,11 @@ error_t btle_init(void)
     if (sd_ble_gap_address_set(BLE_GAP_ADDR_CYCLE_MODE_NONE, &addr) != NRF_SUCCESS) {
         return ERROR_INVALID_PARAM;
     }
+#else
+    ble_gap_privacy_params_t privacy_params = {0};
+    privacy_params.privacy_mode = BLE_GAP_PRIVACY_MODE_OFF;
+    pm_privacy_set(&privacy_params);
+#endif
 
     ASSERT_STATUS( softdevice_ble_evt_handler_set(btle_handler));
     ASSERT_STATUS( softdevice_sys_evt_handler_set(sys_evt_dispatch));
@@ -181,6 +170,8 @@ error_t btle_init(void)
 
 static void btle_handler(ble_evt_t *p_ble_evt)
 {
+    using ble::pal::vendor::nordic::nRF5XGattClient;
+
     /* Library service handlers */
 #if SDK_CONN_PARAMS_MODULE_ENABLE
     ble_conn_params_on_ble_evt(p_ble_evt);
@@ -198,7 +189,7 @@ static void btle_handler(ble_evt_t *p_ble_evt)
 #endif
 
 #if !defined(TARGET_MCU_NRF51_16K_S110) && !defined(TARGET_MCU_NRF51_32K_S110)
-    bleGattcEventHandler(p_ble_evt);
+    nRF5XGattClient::handle_events(p_ble_evt);
 #endif
 
     nRF5xn               &ble             = nRF5xn::Instance(BLE::DEFAULT_INSTANCE);
@@ -219,12 +210,25 @@ static void btle_handler(ble_evt_t *p_ble_evt)
             gap.setConnectionHandle(handle);
             const Gap::ConnectionParams_t *params = reinterpret_cast<Gap::ConnectionParams_t *>(&(p_ble_evt->evt.gap_evt.params.connected.conn_params));
             const ble_gap_addr_t *peer = &p_ble_evt->evt.gap_evt.params.connected.peer_addr;
+#if  (NRF_SD_BLE_API_VERSION <= 2)
             const ble_gap_addr_t *own  = &p_ble_evt->evt.gap_evt.params.connected.own_addr;
+
             gap.processConnectionEvent(handle,
-                                                           role,
-                                                           static_cast<BLEProtocol::AddressType_t>(peer->addr_type), peer->addr,
-                                                           static_cast<BLEProtocol::AddressType_t>(own->addr_type),  own->addr,
-                                                           params);
+                                       role,
+                                       static_cast<BLEProtocol::AddressType_t>(peer->addr_type), peer->addr,
+                                       static_cast<BLEProtocol::AddressType_t>(own->addr_type),  own->addr,
+                                       params);
+#else
+            Gap::AddressType_t addr_type;
+            Gap::Address_t     own_address;
+            gap.getAddress(&addr_type, own_address);
+
+            gap.processConnectionEvent(handle,
+                                       role,
+                                       static_cast<BLEProtocol::AddressType_t>(peer->addr_type), peer->addr,
+                                       addr_type,  own_address,
+                                       params);
+#endif
             break;
         }
 
@@ -254,9 +258,7 @@ static void btle_handler(ble_evt_t *p_ble_evt)
 
 #if !defined(TARGET_MCU_NRF51_16K_S110) && !defined(TARGET_MCU_NRF51_32K_S110)
             // Close all pending discoveries for this connection
-            nRF5xGattClient& gattClient = ble.getGattClient();
-            gattClient.characteristicDescriptorDiscoverer().terminate(handle, BLE_ERROR_INVALID_STATE);
-            gattClient.discovery().terminate(handle);
+            nRF5XGattClient::handle_connection_termination(handle);
 #endif
 
             gap.processDisconnectionEvent(handle, reason);

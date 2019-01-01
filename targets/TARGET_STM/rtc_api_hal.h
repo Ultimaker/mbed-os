@@ -1,6 +1,6 @@
 /* mbed Microcontroller Library
 *******************************************************************************
-* Copyright (c) 2016, STMicroelectronics
+* Copyright (c) 2017, STMicroelectronics
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -33,19 +33,23 @@
 
 #include <stdint.h>
 #include "rtc_api.h"
+#include "ticker_api.h"
+#include "lp_ticker_api.h"
+#include "us_ticker_api.h"
+#include "hal_tick.h"
+#include "mbed_critical.h"
+#include "mbed_error.h"
+#include "mbed_debug.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*
- * Extend rtc_api.h
- */
 
-/** Set the given function as handler of wakeup timer event.
- *
- * @param handler    The function to set as handler
- */
-void rtc_set_irq_handler(uint32_t handler);
+#if MBED_CONF_TARGET_LSE_AVAILABLE
+#define RTC_CLOCK LSE_VALUE
+#else
+#define RTC_CLOCK LSI_VALUE
+#endif
 
 /** Read the subsecond register.
  *

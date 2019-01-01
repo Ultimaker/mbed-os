@@ -65,7 +65,7 @@ void spi_format(spi_t *obj, int bits, int mode, int slave)
     spi_master_config_t master_config;
     spi_slave_config_t slave_config;
 
-    if ((bits != 8) || (bits != 16)) {
+    if ((bits != 8) && (bits != 16)) {
         error("Only 8bits and 16bits SPI supported");
         return;
     }
@@ -113,6 +113,21 @@ int spi_master_write(spi_t *obj, int value)
     SPI_MasterTransferBlocking(base, &xfer);
 
     return rx_data & 0xffff;
+}
+
+int spi_master_block_write(spi_t *obj, const char *tx_buffer, int tx_length,
+                           char *rx_buffer, int rx_length, char write_fill) {
+    int total = (tx_length > rx_length) ? tx_length : rx_length;
+
+    for (int i = 0; i < total; i++) {
+        char out = (i < tx_length) ? tx_buffer[i] : write_fill;
+        char in = spi_master_write(obj, out);
+        if (i < rx_length) {
+            rx_buffer[i] = in;
+        }
+    }
+
+    return total;
 }
 
 int spi_slave_receive(spi_t *obj)

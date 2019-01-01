@@ -62,7 +62,7 @@
  * to use them, as they could exist and be more efficient than 32-bit on 8-bit
  * systems...)
  */
-#ifndef UINT24_LEAST_MAX
+#ifndef UINT_LEAST24_MAX
 typedef uint_least32_t uint_least24_t;
 #define UINT_LEAST24_MAX UINT_LEAST32_MAX
 #define UINT24_C(x) UINT32_C(x)
@@ -72,16 +72,16 @@ typedef uint_least32_t uint_least24_t;
 #define PRIXLEAST24 PRIXLEAST32
 #endif
 
-#ifndef INT24_LEAST_MAX
+#ifndef INT_LEAST24_MAX
 typedef int_least32_t int_least24_t;
-#define INT24_LEAST_MIN INT_LEAST32_MIN
-#define INT24_LEAST_MAX INT_LEAST32_MAX
+#define INT_LEAST24_MIN INT_LEAST32_MIN
+#define INT_LEAST24_MAX INT_LEAST32_MAX
 #define INT24_C(x) INT32_C(x)
 #define PRIdLEAST24 PRIdLEAST32
 #define PRIiLEAST24 PRIiLEAST32
 #endif
 
-#ifndef UINT24_FAST_MAX
+#ifndef UINT_FAST24_MAX
 typedef uint_fast32_t uint_fast24_t;
 #define UINT_FAST24_MAX UINT_FAST32_MAX
 #define PRIoFAST24 PRIoFAST32
@@ -90,7 +90,7 @@ typedef uint_fast32_t uint_fast24_t;
 #define PRIXFAST24 PRIXFAST32
 #endif
 
-#ifndef INT24_FAST_MAX
+#ifndef INT_FAST24_MAX
 typedef int_fast32_t int_fast24_t;
 #define INT_FAST24_MIN INT_FAST32_MIN
 #define INT_FAST24_MAX INT_FAST32_MAX
@@ -254,6 +254,25 @@ typedef int_fast32_t int_fast24_t;
 #else
 #define NS_FUNNY_COMPARE_OK
 #define NS_FUNNY_COMPARE_RESTORE
+#endif
+
+/** \brief Pragma to suppress warnings arising from dummy definitions.
+ *
+ * Useful when you have function-like macros that returning constants
+ * in cut-down builds. Can be fairly cavalier about disabling as we
+ * do not expect every build to use this macro. Generic builds of
+ * components should ensure this is not included by only using it in
+ * a ifdef blocks providing dummy definitions.
+ */
+#ifdef __CC_ARM
+// statement is unreachable(111),  controlling expression is constant(236), expression has no effect(174),
+// function was declared but never referenced(177), variable was set but never used(550)
+#define NS_DUMMY_DEFINITIONS_OK _Pragma("diag_suppress=111,236,174,177,550")
+#elif defined __IAR_SYSTEMS_ICC__
+// controlling expression is constant
+#define NS_DUMMY_DEFINITIONS_OK _Pragma("diag_suppress=Pe236")
+#else
+#define NS_DUMMY_DEFINITIONS_OK
 #endif
 
 /** \brief Convert pointer to member to pointer to containing structure */

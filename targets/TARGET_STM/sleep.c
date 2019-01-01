@@ -27,54 +27,85 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************
  */
+#if DEVICE_SLEEP
+
 #include "sleep_api.h"
 #include "rtc_api_hal.h"
 
-#if DEVICE_SLEEP
-
-#include "cmsis.h"
-
+extern void HAL_SuspendTick(void);
+extern void HAL_ResumeTick(void);
 
 void hal_sleep(void)
 {
-    // Stop HAL systick
+    // Disable IRQs
+    core_util_critical_section_enter();
+
+    // Stop HAL tick to avoid to exit sleep in 1ms
     HAL_SuspendTick();
     // Request to enter SLEEP mode
     HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
-    // Restart HAL systick
+    // Restart HAL tick
     HAL_ResumeTick();
+
+    // Enable IRQs
+    core_util_critical_section_exit();
 }
 
 void hal_deepsleep(void)
 {
-    // Stop HAL systick
+    // Disable IRQs
+    core_util_critical_section_enter();
+
+    // Stop HAL tick
     HAL_SuspendTick();
+    uint32_t EnterTimeUS = us_ticker_read();
 
     // Request to enter STOP mode with regulator in low power mode
 #if TARGET_STM32L4
-    if (__HAL_RCC_PWR_IS_CLK_ENABLED()) {
-        HAL_PWREx_EnableLowPowerRunMode();
-        HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
-        HAL_PWREx_DisableLowPowerRunMode();
-    } else {
+    int pwrClockEnabled = __HAL_RCC_PWR_IS_CLK_ENABLED();
+    int lowPowerModeEnabled = PWR->CR1 & PWR_CR1_LPR;
+
+    if (!pwrClockEnabled) {
         __HAL_RCC_PWR_CLK_ENABLE();
-        HAL_PWREx_EnableLowPowerRunMode();
-        HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+    }
+    if (lowPowerModeEnabled) {
         HAL_PWREx_DisableLowPowerRunMode();
+    }
+
+    HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+
+    if (lowPowerModeEnabled) {
+        HAL_PWREx_EnableLowPowerRunMode();
+    }
+    if (!pwrClockEnabled) {
         __HAL_RCC_PWR_CLK_DISABLE();
     }
 #else /* TARGET_STM32L4 */
     HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_STOPENTRY_WFI);
 #endif /* TARGET_STM32L4 */
 
-    // Restart HAL systick
+    // Restart HAL tick
     HAL_ResumeTick();
+
+    // Enable IRQs
+    core_util_critical_section_exit();
 
     // After wake-up from STOP reconfigure the PLL
     SetSysClock();
 
-#if DEVICE_LOWPOWERTIMER
-    rtc_synchronize();
+    TIM_HandleTypeDef TimMasterHandle;
+    TimMasterHandle.Instance = TIM_MST;
+    __HAL_TIM_SET_COUNTER(&TimMasterHandle, EnterTimeUS);
+
+#if DEVICE_RTC
+    /* Wait for RTC RSF bit synchro if RTC is configured */
+#if (TARGET_STM32F2) || (TARGET_STM32F4) || (TARGET_STM32F7)
+    if (READ_BIT(RCC->BDCR, RCC_BDCR_RTCSEL)) {
+#else /* (TARGET_STM32F2) || (TARGET_STM32F4) || (TARGET_STM32F7) */
+    if (__HAL_RCC_GET_RTC_SOURCE()) {
+#endif  /* (TARGET_STM32F2) || (TARGET_STM32F4) || (TARGET_STM32F7) */
+        rtc_synchronize();
+    }
 #endif
 }
 

@@ -23,7 +23,7 @@ GDB:=$(PREFIX)gdb
 OBJDUMP:=$(PREFIX)objdump
 
 # Translate between uVisor namespace and mbed namespace
-TARGET_TRANSLATION:=MCU_K64F.kinetis EFM32.efm32 STM32F4.stm32 ARM_BEETLE_SOC.beetle
+TARGET_TRANSLATION:=MCU_K64F.kinetis EFM32.efm32 STM32F4.stm32 ARM_BEETLE_SOC.beetle M480.m480
 TARGET_PREFIX:=../
 TARGET_SUPPORTED:=$(TARGET_PREFIX)targets/TARGET_UVISOR_SUPPORTED
 TARGET_UNSUPPORTED:=$(TARGET_PREFIX)targets/TARGET_UVISOR_UNSUPPORTED
@@ -44,6 +44,10 @@ TARGET_LIST_DIR_SRC:=$(addprefix $(UVISOR_API)/lib/,$(TARGET_LIST))
 TARGET_LIST_DIR_DST:=$(addprefix $(TARGET_SUPPORTED)/,$(TARGET_LIST))
 TARGET_LIST_RELEASE:=$(addsuffix /release,$(TARGET_LIST_DIR_DST))
 TARGET_LIST_DEBUG:=$(addsuffix /debug,$(TARGET_LIST_DIR_DST))
+
+# mbed OS paths
+MBED_OS_ROOT:=../../..
+MBED_OS_CMSIS:=$(MBED_OS_ROOT)/cmsis
 
 .PHONY: all deploy rsync publish uvisor uvisor-compile clean cache update
 
@@ -75,18 +79,23 @@ rsync:
 	cp $(UVISOR_DIR)/core/system/inc/page_allocator_config.h $(TARGET_LIB_SRC)/page_allocator_config.h
 	rsync -a --delete $(UVISOR_API)/rtx/src/ $(TARGET_LIB_SRC)/rtx
 	#
+	# Copying the secure API header file...
+	# Note: This will not be needed when we upstream the file to CMSIS.
+	cp $(UVISOR_DIR)/core/cmsis/inc/core_cmSecureAccess.h $(MBED_OS_CMSIS)/
+	#
 	# Copying the documentation...
-	cp $(UVISOR_DIR)/docs/api/QUICKSTART.md $(TARGET_PREFIX)/README.md
+	cp $(UVISOR_DIR)/docs/*/QUICKSTART.md $(TARGET_PREFIX)/README.md
 	#
 	# Copying licenses
 	cp $(UVISOR_DIR)/LICENSE* $(TARGET_SUPPORTED)
 
-TARGET_M%: $(TARGET_SUPPORTED)/*/*/*_cortex_m%*.a
+TARGET_M%: TARGET_LIBS_FIND=$(wildcard $(TARGET_SUPPORTED)/*/*/*_cortex_m$(subst TARGET_M,,$@)*.a)
+TARGET_M%: rsync
 	@printf "#\n# Copying $@ files...\n"
-	mkdir $(foreach file,$^,$(dir $(file))$@)
-	$(foreach file,$^,mv $(file) $(dir $(file))$@/lib$(notdir $(file));)
+	mkdir $(foreach file,$(TARGET_LIBS_FIND),$(dir $(file))$@)
+	$(foreach file,$(TARGET_LIBS_FIND),mv $(file) $(dir $(file))$@/lib$(notdir $(file));)
 
-publish: rsync TARGET_M3 TARGET_M4
+publish: TARGET_M3 TARGET_M4
 	#
 	# Rename release directorires to TARGET_RELEASE filters...
 	$(foreach dir, $(TARGET_LIST_RELEASE),mv $(dir) $(dir $(dir))TARGET_RELEASE;)
@@ -102,6 +111,8 @@ publish: rsync TARGET_M3 TARGET_M4
 	#
 	# Updated list of authors, sorted by contributions
 	git -C $(UVISOR_DIR) shortlog -s -n > $(TARGET_PREFIX)AUTHORS.txt
+	# Updated version of uvisor-tests
+	cp $(UVISOR_DIR)/tools/uvisor-tests.txt $(TARGET_PREFIX)uvisor-tests.txt
 
 uvisor-compile: $(UVISOR_GIT_CFG)
 	make -C $(UVISOR_DIR)

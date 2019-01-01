@@ -1,14 +1,28 @@
 M_VECTOR_RAM_SIZE = 0x400;
 
-/* Heap: 1/4 of RAM. Stack: 1/8 of RAM. */
-STACK_SIZE = 0x6000;
-HEAP_SIZE = 0xC000;
+/* With the RTOS in use, this does not affect the main stack size. The size of
+ * the stack where main runs is determined via the RTOS. */
+STACK_SIZE = 0x400;
+
+/* This is the guaranteed minimum available heap size for an application. When
+ * uVisor is enabled, this is also the maximum available heap size. The
+ * HEAP_SIZE value is set by uVisor porters to balance the size of the legacy
+ * heap and the page heap in uVisor applications. */
+HEAP_SIZE = 0x6000;
+
+#if !defined(MBED_APP_START)
+  #define MBED_APP_START 0x08000000
+#endif
+
+#if !defined(MBED_APP_SIZE)
+  #define MBED_APP_SIZE 2048k
+#endif
 
 /* Specify the memory areas */
 MEMORY
 {
-    VECTORS (rx) : ORIGIN = 0x08000000, LENGTH = 0x400
-    FLASH (rx)   : ORIGIN = 0x08000400, LENGTH = 2048k - 0x400
+    VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x400
+    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
     CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K
     RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k
 }

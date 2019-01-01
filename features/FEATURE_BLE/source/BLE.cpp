@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <stdio.h>
 #include "ble/BLE.h"
 #include "ble/BLEInstanceBase.h"
 
@@ -29,6 +30,30 @@
 #include <mbed_error.h>
 #include <toolchain.h>
 #endif
+
+static const char* error_strings[] = {
+    "BLE_ERROR_NONE: No error",
+    "BLE_ERROR_BUFFER_OVERFLOW: The requested action would cause a buffer overflow and has been aborted",
+    "BLE_ERROR_NOT_IMPLEMENTED: Requested a feature that isn't yet implement or isn't supported by the target HW",
+    "BLE_ERROR_PARAM_OUT_OF_RANGE: One of the supplied parameters is outside the valid range",
+    "BLE_ERROR_INVALID_PARAM: One of the supplied parameters is invalid",
+    "BLE_STACK_BUSY: The stack is busy",
+    "BLE_ERROR_INVALID_STATE: Invalid state",
+    "BLE_ERROR_NO_MEM: Out of Memory",
+    "BLE_ERROR_OPERATION_NOT_PERMITTED: The operation requested is not permitted",
+    "BLE_ERROR_INITIALIZATION_INCOMPLETE: The BLE subsystem has not completed its initialisation",
+    "BLE_ERROR_ALREADY_INITIALIZED: The BLE system has already been initialised",
+    "BLE_ERROR_UNSPECIFIED: Unknown error",
+    "BLE_ERROR_INTERNAL_STACK_FAILURE: The platform-specific stack failed"
+};
+
+const char* BLE::errorToString(ble_error_t error)
+{
+    if (error > BLE_ERROR_INTERNAL_STACK_FAILURE) {
+        return "Illegal error code";
+    }
+    return error_strings[error];
+}
 
 ble_error_t
 BLE::initImplementation(FunctionPointerWithContext<InitializationCompleteCallbackContext*> callback)
@@ -139,7 +164,8 @@ void defaultSchedulingCallback(BLE::OnEventsToProcessCallbackContext* params) {
 
 
 BLE::BLE(InstanceID_t instanceIDIn) : instanceID(instanceIDIn), transport(),
-    whenEventsToProcess(defaultSchedulingCallback)
+    whenEventsToProcess(defaultSchedulingCallback),
+    event_signaled(false)
 {
     static BLEInstanceBase *transportInstances[NUM_INSTANCES];
 
@@ -168,6 +194,7 @@ ble_error_t BLE::shutdown(void)
         error("bad handle to underlying transport");
     }
 
+    event_signaled = false;
     return transport->shutdown();
 }
 
@@ -263,9 +290,15 @@ void BLE::waitForEvent(void)
 
 void BLE::processEvents()
 {
+    if (event_signaled == false) {
+        return;
+    }
+
     if (!transport) {
         error("bad handle to underlying transport");
     }
+
+    event_signaled = false;
 
     transport->processEvents();
 }
@@ -273,10 +306,25 @@ void BLE::processEvents()
 void BLE::onEventsToProcess(const BLE::OnEventsToProcessCallback_t& callback)
 {
     whenEventsToProcess = callback;
+
+    // If events were previously signaled but the handler was not in place then
+    // signal immediately events availability
+    if (event_signaled && whenEventsToProcess) {
+        OnEventsToProcessCallbackContext params = {
+            *this
+        };
+        whenEventsToProcess(&params);
+    }
 }
 
 void BLE::signalEventsToProcess()
 {
+    if (event_signaled == true) {
+        return;
+    }
+
+    event_signaled = true;
+
     if (whenEventsToProcess) {
         OnEventsToProcessCallbackContext params = {
             *this

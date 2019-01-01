@@ -473,6 +473,11 @@ static void ipv6cp_close(ppp_pcb *pcb, const char *reason) {
  * ipv6cp_lowerup - The lower layer is up.
  */
 static void ipv6cp_lowerup(ppp_pcb *pcb) {
+#if PPP_IPV4_SUPPORT && PPP_IPV6_SUPPORT
+    if (pcb->ipv6cp_disabled) {
+        return;
+    }
+#endif
     fsm_lowerup(&pcb->ipv6cp_fsm);
 }
 
@@ -1093,7 +1098,7 @@ static void ipv6_check_options() {
 
     if (!wo->opt_local) {	/* init interface identifier */
 	if (wo->use_ip && eui64_iszero(wo->ourid)) {
-	    eui64_setlo32(wo->ourid, ntohl(ipcp_wantoptions[0].ouraddr));
+	    eui64_setlo32(wo->ourid, lwip_ntohl(ipcp_wantoptions[0].ouraddr));
 	    if (!eui64_iszero(wo->ourid))
 		wo->opt_local = 1;
 	}
@@ -1104,7 +1109,7 @@ static void ipv6_check_options() {
 
     if (!wo->opt_remote) {
 	if (wo->use_ip && eui64_iszero(wo->hisid)) {
-	    eui64_setlo32(wo->hisid, ntohl(ipcp_wantoptions[0].hisaddr));
+	    eui64_setlo32(wo->hisid, lwip_ntohl(ipcp_wantoptions[0].hisaddr));
 	    if (!eui64_iszero(wo->hisid))
 		wo->opt_remote = 1;
 	}

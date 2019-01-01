@@ -23,22 +23,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cmsis.h"
-#include "NUC472_442.h"
 #include "us_ticker_api.h"
 #include "trng_api.h"
+#include "crypto-misc.h"
 
 /*
  * Get Random number generator.
  */
-static volatile int  g_PRNG_done;
 
-void CRYPTO_IRQHandler()
-{
-    if (PRNG_GET_INT_FLAG()) {
-        g_PRNG_done = 1;
-        PRNG_CLR_INT_FLAG();
-    }
-} 
+#define PRNG_KEY_SIZE  (0x20UL)
 
 static void trng_get(unsigned char *pConversionData)
 {
@@ -47,8 +40,9 @@ static void trng_get(unsigned char *pConversionData)
     p32ConversionData = (uint32_t *)pConversionData;
 
     PRNG_Open(PRNG_KEY_SIZE_256, 1, us_ticker_read());
+    crypto_prng_prestart();
     PRNG_Start();
-    while (!g_PRNG_done);
+    crypto_prng_wait();
 
     PRNG_Read(p32ConversionData);
 }
@@ -56,45 +50,43 @@ static void trng_get(unsigned char *pConversionData)
 void trng_init(trng_t *obj)
 {
     (void)obj;
-    /* Unlock protected registers */
-    SYS_UnlockReg();    
-    /* Enable IP clock */
-    CLK_EnableModuleClock(CRPT_MODULE);
     
-    /* Lock protected registers */
-    SYS_LockReg();
+    /* Init crypto module */
+    crypto_init();
     
-    NVIC_EnableIRQ(CRPT_IRQn);
     PRNG_ENABLE_INT();
 }
 
 void trng_free(trng_t *obj)
 {
     (void)obj;
+    
     PRNG_DISABLE_INT();
-    NVIC_DisableIRQ(CRPT_IRQn);
+    
+    /* Uninit crypto module */
+    crypto_uninit();
 }
 
 int trng_get_bytes(trng_t *obj, uint8_t *output, size_t length, size_t *output_length)
 {
     (void)obj;
-
-    *output_length = 0;
-    if (length < 32) {
-        unsigned char tmpBuff[32];
-        trng_get(tmpBuff);
-        memcpy(output, &tmpBuff, length);
-        *output_length = length;
-    } else {
-        for (size_t i = 0; i < (length/32); i++) {
-            trng_get(output);
-            *output_length += 32;
-            output += 32;
-        }
+    unsigned char tmpBuff[PRNG_KEY_SIZE];
+    size_t cur_length = 0;
+    
+    while (length >= sizeof(tmpBuff)) {
+        trng_get(output);
+        output += sizeof(tmpBuff);
+        cur_length += sizeof(tmpBuff);
+        length -= sizeof(tmpBuff);
     }
-
+    if (length > 0) {
+        trng_get(tmpBuff);
+        memcpy(output, tmpBuff, length);
+        cur_length += length;
+        crypto_zeroize(tmpBuff, sizeof(tmpBuff));
+    }
+    *output_length = cur_length;
     return 0;
 }
- 
-#endif
 
+#endif

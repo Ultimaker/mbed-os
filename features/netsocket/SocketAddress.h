@@ -1,6 +1,4 @@
 
-/** \addtogroup netsocket */
-/** @{*/
 /* SocketAddress
  * Copyright (c) 2015 ARM Limited
  *
@@ -21,7 +19,7 @@
 #define SOCKET_ADDRESS_H
 
 #include "nsapi_types.h"
-#include "toolchain.h"
+#include "mbed_toolchain.h"
 
 // Predeclared classes
 class NetworkStack;
@@ -31,6 +29,7 @@ class NetworkInterface;
 /** SocketAddress class
  *
  *  Representation of an IP address and port pair. 
+ *  @addtogroup netsocket
  */
 class SocketAddress {
 public:
@@ -66,7 +65,7 @@ public:
 
     /** Create a SocketAddress from an IP address and port
      *
-     *  @param host     Null-terminated representation of the IP address
+     *  @param addr     Null-terminated representation of the IP address
      *  @param port     Optional 16-bit port
      */
     SocketAddress(const char *addr, uint16_t port = 0);
@@ -81,7 +80,7 @@ public:
 
     /** Create a SocketAddress from another SocketAddress
      *
-     *  @param address  SocketAddress to copy
+     *  @param addr  SocketAddress to copy
      */
     SocketAddress(const SocketAddress &addr);
    

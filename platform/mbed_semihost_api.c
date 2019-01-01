@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "cmsis.h"
-#include "platform/semihost_api.h"
+#include "platform/mbed_semihost_api.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -152,10 +152,11 @@ int semihost_connected(void) {
 #endif
 
 int semihost_disabledebug(void) {
+    uint32_t args[1];
 #if !(DEVICE_DEBUG_AWARENESS)
     is_debugger_attached = 0;
 #endif
-    return __semihost(USR_DISABLEDEBUG, NULL);
+    return __semihost(USR_DISABLEDEBUG, &args);
 }
 
 #endif

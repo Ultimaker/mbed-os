@@ -48,7 +48,6 @@
 #define I2C_SPEED_400K_AT_8MHZ     (uint8_t)0x03
 #define I2C_SPEED_400K_AT_16MHZ    (uint8_t)0x08
 
-
 /* I2C commands */
 #define I2C_CMD_NULL          0x00
 #define I2C_CMD_WDAT0         0x10
@@ -83,13 +82,20 @@
 #define I2C_APB_CLK_DIVIDER_VAL_MASK    0x1FE0
 
 /* Error check */
-#define I2C_UFL_CHECK         (d->membase->STATUS.WORD & 0x80)
-#define FIFO_OFL_CHECK        (d->membase->STATUS.WORD & 0x10)
-#define I2C_BUS_ERR_CHECK     (d->membase->STATUS.WORD & 0x04)
-#define RD_DATA_READY         (d->membase->STATUS.WORD & 0x02)
+#define I2C_UFL_CHECK         (obj->membase->STATUS.WORD & 0x80)
+#define I2C_FIFO_FULL         (obj->membase->STATUS.WORD & 0x20)
+#define FIFO_OFL_CHECK        (obj->membase->STATUS.WORD & 0x10)
+#define I2C_BUS_ERR_CHECK     (obj->membase->STATUS.WORD & 0x04)
+#define RD_DATA_READY         (obj->membase->STATUS.WORD & 0x02)
+#define I2C_FIFO_EMPTY        (obj->membase->STATUS.WORD & 0x01)
 
 #define I2C_API_STATUS_SUCCESS    0
 #define PAD_REG_ADRS_BYTE_SIZE    4
+
+// The wait_us(0) command is needed so the I2C state machines have enough
+// time for data to settle across all clock domain crossings in their
+// synchronizers, both directions.
+#define SEND_COMMAND(cmd) wait_us(0); obj->membase->CMD_REG = cmd; wait_us(0);
 
 /** Init I2C device.
  * @details

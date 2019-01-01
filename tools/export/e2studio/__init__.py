@@ -14,34 +14,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from os.path import splitext, basename
+from tools.export.gnuarmeclipse import GNUARMEclipse
 
-from tools.export.exporters import Exporter
-
-class E2Studio(Exporter):
+class E2Studio(GNUARMEclipse):
     NAME = 'e2 studio'
     TOOLCHAIN = 'GCC_ARM'
 
     TARGETS = [
         'RZ_A1H',
+        'VK_RZ_A1H',
     ]
 
+    # override
     def generate(self):
-        libraries = []
-        for lib in self.resources.libraries:
-            l, _ = splitext(basename(lib))
-            libraries.append(l[3:])
 
-        ctx = {
-            'name': self.project_name,
-            'include_paths': self.resources.inc_dirs,
-            'linker_script': self.resources.linker_script,
-            
-            'object_files': self.resources.objects,
-            'libraries': libraries,
-            'symbols': self.toolchain.get_symbols()
-        }
-        self.gen_file('e2studio/%s_project.tmpl' % self.target.lower(), ctx, '.project')
-        self.gen_file('e2studio/%s_cproject.tmpl' % self.target.lower(), ctx, '.cproject')
-        self.gen_file('e2studio/%s_gdbinit.tmpl' % self.target.lower(), ctx, '.gdbinit')
-        self.gen_file('e2studio/launch.tmpl', ctx, '%s OpenOCD.launch' % self.project_name)
+        jinja_ctx = self.create_jinja_ctx()
+
+        self.gen_file('e2studio/.cproject.tmpl', jinja_ctx, '.cproject', trim_blocks=True, lstrip_blocks=True)
+        self.gen_file('e2studio/.gdbinit.tmpl', jinja_ctx, '.gdbinit')
+        self.gen_file('e2studio/launch.tmpl', jinja_ctx, '%s OpenOCD.launch' % self.project_name, trim_blocks=True, lstrip_blocks=True)
+
+        self.gen_file('gnuarmeclipse/.project.tmpl', jinja_ctx, '.project', trim_blocks=True, lstrip_blocks=True)
+        self.gen_file('gnuarmeclipse/mbedignore.tmpl', jinja_ctx, '.mbedignore')
+        self.gen_file('gnuarmeclipse/makefile.targets.tmpl', jinja_ctx, 'makefile.targets', trim_blocks=True, lstrip_blocks=True)

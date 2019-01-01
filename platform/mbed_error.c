@@ -16,14 +16,23 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "device.h"
-#include "platform/toolchain.h"
+#include "platform/mbed_toolchain.h"
 #include "platform/mbed_error.h"
 #include "platform/mbed_interface.h"
 #if DEVICE_STDIO_MESSAGES
 #include <stdio.h>
 #endif
 
+static uint8_t error_in_progress = 0;
+
 WEAK void error(const char* format, ...) {
+
+    // Prevent recursion if error is called again
+    if (error_in_progress) {
+        return;
+    }
+    error_in_progress = 1;
+
 #ifndef NDEBUG
     va_list arg;
     va_start(arg, format);

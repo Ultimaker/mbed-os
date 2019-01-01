@@ -1,15 +1,16 @@
 /*
- * Copyright (c) 2016 ARM Limited. All rights reserved.
+ * Copyright (c) 2016-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
- * Licensed under the Apache License, Version 2.0 (the License); you may
- * not use this file except in compliance with the License.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an AS IS BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -25,6 +26,8 @@
 #include "ThreadInterface.h"
 #include "NanostackEthernetInterface.h"
 #include "MeshInterfaceNanostack.h"
+
+struct ns_address;
 
 class NanostackInterface : public NetworkStack {
 public:
@@ -229,6 +232,8 @@ protected:
     virtual nsapi_error_t getsockopt(void *handle, int level, int optname, void *optval, unsigned *optlen);
 
 private:
+    nsapi_size_or_error_t do_sendto(void *handle, const struct ns_address *address, const void *data, nsapi_size_t size);
+    char text_ip_address[40];
     static NanostackInterface * _ns_interface;
 };
 

@@ -1,5 +1,18 @@
 /*
- * Copyright (c) 2015 ARM Limited. All Rights Reserved.
+ * Copyright (c) 2015-2017, Arm Limited and affiliates.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include "socket_api.h"
 #include "socket_api_stub.h"
@@ -58,14 +71,6 @@ int8_t socket_bind(int8_t socket, const ns_address_t *address)
     return socket_api_stub.int8_value;
 }
 
-int8_t socket_send(int8_t socket, uint8_t *buffer, uint16_t length)
-{
-    if( socket_api_stub.counter >= 0){
-        return socket_api_stub.values[socket_api_stub.counter--];
-    }
-
-    return socket_api_stub.int8_value;
-}
 int16_t socket_read(int8_t socket, ns_address_t *address, uint8_t *buffer, uint16_t length)
 {
     if( address ){
@@ -78,15 +83,7 @@ int16_t socket_read(int8_t socket, ns_address_t *address, uint8_t *buffer, uint1
 
     return socket_api_stub.int8_value;
 }
-int8_t socket_sendto(int8_t socket, ns_address_t *address, uint8_t *buffer, uint16_t length)
-{
-    if( socket_api_stub.counter >= 0){
-        return socket_api_stub.values[socket_api_stub.counter--];
-    }
-
-    return socket_api_stub.int8_value;
-}
-int8_t socket_read_session_address(int8_t socket, ns_address_t *address)
+int8_t socket_getpeername(int8_t socket, ns_address_t *address)
 {
     if( socket_api_stub.counter >= 0){
         return socket_api_stub.values[socket_api_stub.counter--];
@@ -110,8 +107,7 @@ int8_t socket_getsockopt(int8_t socket, uint8_t level, uint8_t opt_name, void *o
 
     return socket_api_stub.int8_value;
 }
-
-int8_t socket_sendmsg(int8_t socket, const ns_msghdr_t *msg, int flags)
+int16_t socket_sendmsg(int8_t socket, const ns_msghdr_t *msg, int flags)
 {
     if( socket_api_stub.counter >= 0){
         return socket_api_stub.values[socket_api_stub.counter--];

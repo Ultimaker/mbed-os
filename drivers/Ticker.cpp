@@ -18,28 +18,35 @@
 #include "drivers/TimerEvent.h"
 #include "platform/FunctionPointer.h"
 #include "hal/ticker_api.h"
-#include "platform/critical.h"
+#include "platform/mbed_critical.h"
 
 namespace mbed {
 
 void Ticker::detach() {
     core_util_critical_section_enter();
     remove();
-    _function.attach(0);
+    // unlocked only if we were attached (we locked it) and this is not low power ticker
+    if(_function && _lock_deepsleep) {
+        sleep_manager_unlock_deep_sleep();
+    }
+
+    _function = 0;
     core_util_critical_section_exit();
 }
 
-void Ticker::setup(timestamp_t t) {
+void Ticker::setup(us_timestamp_t t) {
     core_util_critical_section_enter();
     remove();
     _delay = t;
-    insert(_delay + ticker_read(_ticker_data));
+    insert_absolute(_delay + ticker_read_us(_ticker_data));
     core_util_critical_section_exit();
 }
 
 void Ticker::handler() {
-    insert(event.timestamp + _delay);
-    _function.call();
+    insert_absolute(event.timestamp + _delay);
+    if (_function) {
+        _function();
+    }
 }
 
 } // namespace mbed
