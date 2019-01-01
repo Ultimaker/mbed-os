@@ -20,6 +20,7 @@ import re
 import tempfile
 import datetime
 import uuid
+import itertools
 import struct
 import zlib
 import hashlib
@@ -46,6 +47,7 @@ from .targets import TARGET_NAMES, TARGET_MAP
 from .libraries import Library
 from .toolchains import TOOLCHAIN_CLASSES
 from .config import Config
+from .spm import generate_spm_data, generate_partitions_sources
 
 RELEASE_VERSIONS = ['2', '5']
 
@@ -458,8 +460,7 @@ def merge_region_list(region_list, destination, notify, padding=b'\xFF'):
         makedirs(dirname(destination))
     notify.info("Space used after regions merged: 0x%x" %
                 (merged.maxaddr() - merged.minaddr() + 1))
-    with open(destination, "wb+") as output:
-        merged.tofile(output, format=format.strip("."))
+    merged.tofile(destination, format=format.strip("."))
 
 def scan_resources(src_paths, toolchain, dependencies_paths=None,
                    inc_dirs=None, base_path=None, collect_ignores=False):
@@ -507,7 +508,8 @@ def build_project(src_paths, build_path, target, toolchain_name,
                   notify=None, name=None, macros=None, inc_dirs=None, jobs=1,
                   report=None, properties=None, project_id=None,
                   project_description=None, config=None,
-                  app_config=None, build_profile=None, stats_depth=None, ignore=None):
+                  app_config=None, build_profile=None, stats_depth=None,
+                  ignore=None, psa_manifests=None):
     """ Build a project. A project may be a test or a user program.
 
     Positional arguments:
@@ -578,6 +580,22 @@ def build_project(src_paths, build_path, target, toolchain_name,
         # Call unified scan_resources
         resources = scan_resources(src_paths, toolchain, inc_dirs=inc_dirs)
 
+        if psa_manifests is None:
+            psa_manifests = resources.psa_manifests
+        else:
+            psa_manifests.extend(resources.psa_manifests)
+
+        for f in generate_partitions_sources(psa_manifests):
+            resources.add(toolchain.scan_resources(
+                f, base_path=resources.base_path))
+
+        # Skip SPM sources for Mbed OS 2 builds
+        # Directories scanned would not include the root of Mbed OS for legacy builds
+        if 'rtos' in toolchain.config.lib_config_data:
+            # Generate SPM additional code from manifests
+            psa_files_dir = generate_spm_data(psa_manifests, build_path)
+            resources.add(toolchain.scan_resources(psa_files_dir))
+
         # Change linker script if specified
         if linker_script is not None:
             resources.linker_script = linker_script
@@ -612,6 +630,9 @@ def build_project(src_paths, build_path, target, toolchain_name,
             # Write output to file in CSV format for the CI
             map_csv = join(build_path, name + "_map.csv")
             memap_instance.generate_output('csv-ci', stats_depth, map_csv)
+
+            map_html = join(build_path, name + "_map.html")
+            memap_instance.generate_output('html', stats_depth, map_html)
 
         resources.detect_duplicates(toolchain)
 
@@ -649,7 +670,7 @@ def build_library(src_paths, build_path, target, toolchain_name,
                   archive=True, notify=None, macros=None, inc_dirs=None, jobs=1,
                   report=None, properties=None, project_id=None,
                   remove_config_header_file=False, app_config=None,
-                  build_profile=None, ignore=None):
+                  build_profile=None, ignore=None, psa_manifests=None):
     """ Build a library
 
     Positional arguments:
@@ -736,9 +757,17 @@ def build_library(src_paths, build_path, target, toolchain_name,
                                    dependencies_paths=dependencies_paths,
                                    inc_dirs=inc_dirs)
 
+        if psa_manifests is None:
+            psa_manifests = resources.psa_manifests
+        else:
+            psa_manifests.extend(resources.psa_manifests)
+
+        for f in generate_partitions_sources(psa_manifests):
+            resources.add(toolchain.scan_resources(
+                f, base_path=resources.base_path))
 
         # Copy headers, objects and static libraries - all files needed for
-        # static lib
+        # static lib, PSA manifests
         toolchain.copy_files(resources.headers, build_path, resources=resources)
         toolchain.copy_files(resources.objects, build_path, resources=resources)
         toolchain.copy_files(resources.libraries, build_path,

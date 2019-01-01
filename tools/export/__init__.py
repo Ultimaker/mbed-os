@@ -31,6 +31,7 @@ from ..targets import TARGET_NAMES
 from . import (lpcxpresso, ds5_5, iar, makefile, embitz, coide, kds, simplicity,
                atmelstudio, mcuxpresso, sw4stm32, e2studio, zip, cmsis, uvision,
                cdt, vscode, gnuarmeclipse, qtcreator, cmake, nb, cces, codeblocks)
+from ..spm import generate_partitions_sources, generate_spm_data
 
 EXPORTERS = {
     u'uvision5': uvision.Uvision,
@@ -294,6 +295,15 @@ def export_project(src_paths, export_path, target, ide, libraries_paths=None,
     config_header = toolchain.get_config_header()
     resources.headers.append(config_header)
     resources.file_basepath[config_header] = dirname(config_header)
+
+    # Skip SPM sources for Mbed OS 2 builds
+    # Directories scanned would not include the root of Mbed OS for legacy builds
+    if 'rtos' in toolchain.config.lib_config_data:
+        # generate_partitions_sources() is called here to prevent another scan of the file tree
+        psa_files_dirs = generate_partitions_sources(resources.psa_manifests)
+        psa_files_dirs.append(generate_spm_data(resources.psa_manifests, export_path))
+        for directory in psa_files_dirs:
+            resources.add(toolchain.scan_resources(directory, base_path=export_path))
 
     # Change linker script if specified
     if linker_script is not None:

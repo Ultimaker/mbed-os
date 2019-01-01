@@ -19,6 +19,7 @@ limitations under the License.
 TEST BUILD & RUN
 """
 from __future__ import print_function, division, absolute_import
+
 import sys
 import os
 import json
@@ -196,6 +197,7 @@ if __name__ == '__main__':
 
             build_report = {}
             build_properties = {}
+            psa_manifests = []
 
             library_build_success = False
             profile = extract_profile(parser, options, toolchain)
@@ -210,7 +212,8 @@ if __name__ == '__main__':
                               notify=notify, archive=False,
                               app_config=config,
                               build_profile=profile,
-                              ignore=options.ignore)
+                              ignore=options.ignore,
+                              psa_manifests=psa_manifests)
 
                 library_build_success = True
             except ToolException as e:
@@ -244,7 +247,8 @@ if __name__ == '__main__':
                     app_config=config,
                     build_profile=profile,
                     stats_depth=options.stats_depth,
-                    ignore=options.ignore)
+                    ignore=options.ignore,
+                    psa_manifests=psa_manifests)
 
                 # If a path to a test spec is provided, write it to a file
                 if options.test_spec:

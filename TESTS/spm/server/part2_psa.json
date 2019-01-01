@@ -1,0 +1,29 @@
+{
+  "name": "SERVER_TEST_PART2",
+  "type": "SECURE",
+  "priority": "NORMAL",
+  "id": "0x00000003",
+  "entry_point": "part2_main",
+  "stack_size": "0x400",
+  "heap_size": "0x400",
+  "secure_functions": [{
+      "name": "SF_REVERSE",
+      "identifier": "0x00001A03",
+      "signal": "SF_REVERSE_MSK",
+      "non_secure_clients": false,
+      "minor_version": 5,
+      "minor_policy": "strict"
+    },
+    {
+      "name": "SF_DB_TST",
+      "identifier": "0x00001A04",
+      "signal": "SF_DB_TST_MSK",
+      "non_secure_clients": false,
+      "minor_version": 5,
+      "minor_policy": "strict"
+    }
+  ],
+  "source_files": [
+    "partition2.c"
+  ]
+}

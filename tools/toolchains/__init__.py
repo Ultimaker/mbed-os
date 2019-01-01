@@ -45,7 +45,7 @@ from ..memap import MemapParser
 CPU_COUNT_MIN = 1
 CPU_COEF = 1
 
-class LazyDict(dict):
+class LazyDict(object):
     def __init__(self):
         self.eager = {}
         self.lazy = {}
@@ -130,6 +130,7 @@ class Resources:
         self.s_sources = []
         self.c_sources = []
         self.cpp_sources = []
+        self.psa_manifests = []
 
         self.lib_dirs = set([])
         self.objects = []
@@ -178,6 +179,7 @@ class Resources:
         self.s_sources += resources.s_sources
         self.c_sources += resources.c_sources
         self.cpp_sources += resources.cpp_sources
+        self.psa_manifests += resources.psa_manifests
 
         self.lib_dirs |= resources.lib_dirs
         self.objects += resources.objects
@@ -252,8 +254,6 @@ class Resources:
             headername = basename(filename)
             dupe_headers.setdefault(headername, set())
             dupe_headers[headername] |= set([headername])
-        for res in self.features.values():
-            res._collect_duplicates(dupe_dict, dupe_headers)
         return dupe_dict, dupe_headers
 
     def detect_duplicates(self, toolchain):
@@ -709,8 +709,9 @@ class mbedToolchain:
             return
 
         resources.file_basepath[file_path] = base_path
-        _, ext = splitext(file_path)
+        fname, ext = splitext(file_path)
         ext = ext.lower()
+        fname = fname.lower()
 
         if   ext == '.s':
             resources.s_sources.append(file_path)
@@ -733,7 +734,7 @@ class mbedToolchain:
 
         elif ext == self.LINKER_EXT:
             if resources.linker_script is not None:
-                self.info("Warning: Multiple linker scripts detected: %s -> %s" % (resources.linker_script, file_path))
+                self.notify.info("Warning: Multiple linker scripts detected: %s -> %s" % (resources.linker_script, file_path))
             resources.linker_script = file_path
 
         elif ext == '.lib':
@@ -755,7 +756,10 @@ class mbedToolchain:
             resources.bin_files.append(file_path)
 
         elif ext == '.json':
-            resources.json_files.append(file_path)
+            if fname.endswith('_psa'):
+                resources.psa_manifests.append(file_path)
+            else:
+                resources.json_files.append(file_path)
 
 
     def scan_repository(self, path):
@@ -1085,7 +1089,7 @@ class mbedToolchain:
         lib = self.STD_LIB_NAME % name
         fout = join(dir, lib)
         if self.need_update(fout, objects):
-            self.info("Library: %s" % lib)
+            self.notify.info("Library: %s" % lib)
             self.archive(objects, fout)
             needed_update = True
 
@@ -1175,7 +1179,7 @@ class mbedToolchain:
 
         # Parse and decode a map file
         if memap.parse(abspath(map), toolchain) is False:
-            self.info("Unknown toolchain for memory statistics %s" % toolchain)
+            self.notify.info("Unknown toolchain for memory statistics %s" % toolchain)
             return None
 
         # Store the memap instance for later use
