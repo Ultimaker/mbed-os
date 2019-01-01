@@ -25,6 +25,7 @@
 
 #include "sleep_api.h"
 #include "mbed_toolchain.h"
+#include "hal/ticker_api.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -68,18 +69,18 @@ extern "C" {
 void sleep_tracker_lock(const char *const filename, int line);
 void sleep_tracker_unlock(const char *const filename, int line);
 
-#define sleep_manager_lock_deep_sleep()           \
-    do                                            \
-    {                                             \
-        sleep_manager_lock_deep_sleep_internal(); \
-        sleep_tracker_lock(__FILE__, __LINE__);   \
+#define sleep_manager_lock_deep_sleep()              \
+    do                                               \
+    {                                                \
+        sleep_manager_lock_deep_sleep_internal();    \
+        sleep_tracker_lock(MBED_FILENAME, __LINE__); \
     } while (0);
 
-#define sleep_manager_unlock_deep_sleep()           \
-    do                                              \
-    {                                               \
-        sleep_manager_unlock_deep_sleep_internal(); \
-        sleep_tracker_unlock(__FILE__, __LINE__);   \
+#define sleep_manager_unlock_deep_sleep()              \
+    do                                                 \
+    {                                                  \
+        sleep_manager_unlock_deep_sleep_internal();    \
+        sleep_tracker_unlock(MBED_FILENAME, __LINE__); \
     } while (0);
 
 #else
@@ -120,7 +121,6 @@ void sleep_manager_unlock_deep_sleep_internal(void);
  * @return true if a target can go to deepsleep, false otherwise
  */
 bool sleep_manager_can_deep_sleep(void);
-
 
 /** Enter auto selected sleep mode. It chooses the sleep or deeepsleep modes based
  *  on the deepsleep locking counter
@@ -169,6 +169,9 @@ static inline void sleep(void)
 
 /** Send the microcontroller to deep sleep
  *
+ * @deprecated
+ * Do not use this function. Applications should use sleep() API which puts the system in deepsleep mode if supported. 
+ *
  * @note This function can be a noop if not implemented by the platform.
  * @note This function will be a noop in debug mode (debug build profile when MBED_DEBUG is defined)
  * @note This function will be a noop while uVisor is in use.
@@ -203,6 +206,34 @@ static inline void system_reset(void)
 {
     NVIC_SystemReset();
 }
+ 
+/** Provides the time spent in sleep mode since boot.
+ *
+ *  @return  Time spent in sleep
+ *  @note  Works only if platform supports LP ticker.
+ */
+us_timestamp_t mbed_time_sleep(void);
+
+/** Provides the time spent in deep sleep mode since boot.
+ *
+ *  @return  Time spent in deep sleep
+ *  @note  Works only if platform supports LP ticker.
+ */
+us_timestamp_t mbed_time_deepsleep(void);
+
+/** Provides the time spent in idle mode since boot.
+ *
+ * @return  Idle thread time.
+ * @note  Works only if platform supports LP ticker.
+ */
+us_timestamp_t mbed_time_idle(void);
+
+/** Provides the time since the system is up i.e. boot.
+ *
+ * @return  System uptime.
+ * @note  Works only if platform supports LP ticker.
+ */
+us_timestamp_t mbed_uptime(void);
 
 #ifdef __cplusplus
 }

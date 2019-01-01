@@ -23,7 +23,7 @@
 #define NVSTORE_ENABLED 0
 #endif
 
-#if NVSTORE_ENABLED
+#if (NVSTORE_ENABLED) || defined(DOXYGEN_ONLY)
 #include <stdint.h>
 #include <stdio.h>
 #include "platform/NonCopyable.h"
@@ -41,14 +41,37 @@ typedef enum {
     NVSTORE_FLASH_AREA_TOO_SMALL   = -7,
     NVSTORE_OS_ERROR               = -8,
     NVSTORE_ALREADY_EXISTS         = -9,
+    NVSTORE_NO_FREE_KEY            = -10,
 } nvstore_status_e;
 
+typedef enum {
+    NVSTORE_FIRST_PREDEFINED_KEY        = 0,
+
+    // All predefined keys used for internal features should be defined here
+
+    NVSTORE_DEVICEKEY_KEY               = 4,
+
+    NVSTORE_LAST_PREDEFINED_KEY         = 15,
+    NVSTORE_NUM_PREDEFINED_KEYS
+} nvstore_predefined_keys_e;
+
+typedef enum {
+    NVSTORE_UNSPECIFIED_OWNER           = 0,
+    // All owners (by features) should be specified here.
+    NVSTORE_MAX_OWNERS                  = 16
+} nvstore_owner_e;
+
 #ifndef NVSTORE_MAX_KEYS
-#define NVSTORE_MAX_KEYS 16
+#define NVSTORE_MAX_KEYS ((uint16_t)NVSTORE_NUM_PREDEFINED_KEYS)
 #endif
 
 // defines 2 areas - active and nonactive, not configurable
 #define NVSTORE_NUM_AREAS        2
+
+/** NVStore class
+ *
+ *  Class for storing data by keys in the internal flash
+ */
 
 class NVStore : private mbed::NonCopyable<NVStore> {
 public:
@@ -142,6 +165,30 @@ public:
      *
      */
     int set(uint16_t key, uint16_t buf_size, const void *buf);
+
+    /**
+     * @brief Allocate a free key (to be used later in a set operation).
+     *
+     * @param[out] key                  Returned key of stored item.
+     * @param[in]  owner                Owner of allocated key.
+     *
+     * @returns NVSTORE_SUCCESS           Key was successfully allocated.
+     *          NVSTORE_NO_FREE_KEY       Couldn't allocate a key for this call.
+     *
+     */
+    int allocate_key(uint16_t &key, uint8_t owner = NVSTORE_UNSPECIFIED_OWNER);
+
+    /**
+     * @brief Free all allocated keys that belong to a specific owner.
+     *
+     * @param[in]  owner                Owner.
+     *
+     * @returns NVSTORE_SUCCESS           Value was successfully written on Flash.
+     *          NVSTORE_WRITE_ERROR       Physical error writing data.
+     *          NVSTORE_BAD_VALUE         Bad value in any of the parameters.
+     *
+     */
+    int free_all_keys_by_owner(uint8_t owner);
 
     /**
      * @brief Programs one item of data on Flash, given key, allowing no consequent sets to this key.
@@ -286,8 +333,6 @@ private:
     /**
      * @brief Calculate addresses and sizes of areas (in case no user configuration is given),
      *        or validate user configuration (if given).
-     *
-     * @param[in]  area                   Area.
      */
     void calc_validate_area_params();
 
@@ -310,16 +355,17 @@ private:
      * @param[in]  buf                    Output Buffer.
      * @param[out] actual_size            Actual data size (bytes).
      * @param[in]  validate_only          Just validate (without reading to buffer).
-     * @param[out] validate               Is the record valid.
+     * @param[out] valid                  Is the record valid.
      * @param[out] key                    Record key.
      * @param[out] flags                  Record flags.
+     * @param[out] owner                  Owner.
      * @param[out] next_offset            Offset of next record.
      *
      * @returns 0 for success, nonzero for failure.
      */
     int read_record(uint8_t area, uint32_t offset, uint16_t buf_size, void *buf,
                     uint16_t &actual_size, int validate_only, int &valid,
-                    uint16_t &key, uint16_t &flags, uint32_t &next_offset);
+                    uint16_t &key, uint16_t &flags, uint8_t &owner, uint32_t &next_offset);
 
     /**
      * @brief Write an NVStore record from a given location.
@@ -328,13 +374,14 @@ private:
      * @param[in]  offset                 Offset of record in area.
      * @param[in]  key                    Record key.
      * @param[in]  flags                  Record flags.
+     * @param[in]  owner                  Owner.
      * @param[in]  data_size              Data size (bytes).
      * @param[in]  data_buf               Data buffer.
      * @param[out] next_offset            Offset of next record.
      *
      * @returns 0 for success, nonzero for failure.
      */
-    int write_record(uint8_t area, uint32_t offset, uint16_t key, uint16_t flags,
+    int write_record(uint8_t area, uint32_t offset, uint16_t key, uint16_t flags, uint8_t owner,
                      uint32_t data_size, const void *data_buf, uint32_t &next_offset);
 
     /**
@@ -367,12 +414,13 @@ private:
      *
      * @param[in]  key                    Record key.
      * @param[in]  flags                  Record flags.
+     * @param[in]  owner                  Owner.
      * @param[in]  buf_size               Data size (bytes).
      * @param[in]  buf                    Data buffer.
      *
      * @returns 0 for success, nonzero for failure.
      */
-    int garbage_collection(uint16_t key, uint16_t flags, uint16_t buf_size, const void *buf);
+    int garbage_collection(uint16_t key, uint16_t flags, uint8_t owner, uint16_t buf_size, const void *buf);
 
     /**
      * @brief Actual logics of get API (covers also get size API).
@@ -401,6 +449,7 @@ private:
     int do_set(uint16_t key, uint16_t buf_size, const void *buf, uint16_t flags);
 
 };
+/** @}*/
 
 #endif // NVSTORE_ENABLED
 
