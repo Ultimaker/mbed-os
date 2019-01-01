@@ -1,4 +1,108 @@
 ================ Revision history ============================================
+5.3.3
+ - em_cmu: 48 MHz HFRCO band selectable for devices that support it.
+ - em_emu: Added macro guards for BU mode functionality for series 0 devices.
+
+5.3.2
+ - No changes.
+
+5.3.1
+ - em_opamp: Corrected reload of default calibration trims in OPAMP_Enable()
+   for Series 0.
+ - em_core: Fixed invalid parameter in CORE_YIELD_CRITICAL and 
+   CORE_YIELD_ATOMIC macros.            
+
+5.3.0
+ - em_chip: Updated PLFRCO tuning values.
+ - em_can: Fixed ID filter mask bug. 
+ - em_gpio: Doc updates.
+ - em_gpio: Fixed bug in GPIO pin validation to enable PD9 on BGM121 modules.
+ - em_ldma: Added missing signals for EFM32GG11.
+
+5.2.2:
+ - em_emu: Fixed bug in EMU_EM4Init(), The BUBODRSTDIS field was not initialized
+   as specified in function input parameters.
+
+5.2.1:
+ - em_emu: Fixed a problem with handling of DCDC bypass current limiter
+   that may cause brownout reset.
+ - em_chip: Added workaround for errata DCDC-E206 for EFR32xG1x devices.
+ - em_cmu: Fixed handling of HFCLKLE prescaling at frequencies above 64 MHz.
+
+5.2.0:
+ - em_cmu: Added flash wait state handling for all devices that can scale down
+   the voltage.
+ - em_adc: Fixed bug where ADC SINGLECTRLX register fields VREFSEL, PRSSEL and
+   FIFOOFACT was not cleared when calling ADC_InitSingle().
+ - em_msc: Removed call to SystemCoreClockGet() in MSC_Init.
+ - em_msc: MSC_WriteWordFast() can now only be used when executing code from
+   RAM on parts that include a flash write buffer.
+ - em_emu: Using VMON calibration values to set voltage thresholds when
+   calling EMU_VmonInit() and EMU_VmonHystInit(). The DI page contains
+   calibration values for 1.86 V and 2.98 V for each VMON channel. Updated
+   VMON supported voltage range to 1.62V-3.4V.
+ - em_emu: Added EMU_Save() and changed EMU_EnterEM2() and EMU_EnterEM3()
+   to only save the state if the restore parameter is true.
+ - em_usart: Fixed USART async baudrate calculation for EFM32HG devices.
+   The extra fractional bits in the CLKDIV register was not used.
+ - Added support for EFM32GG11B devices. This includes new modules for
+   Quad SPI (em_qspi) and CAN (em_can). This also includes
+   changes to other emlib modules in order to support the changes in the
+   register interface of the new device.
+ - em_cmu: Added DPLL support. Added support for asynchronous clocks for
+   ADC, reference clocks for QSPI and SDIO and USB rate clock. Added
+   functions to support the USHFRCO and clock select for HFXOX2.
+ - em_gpio: Using single cycle set and clear of DOUT on platforms
+   where this is supported.
+ - em_lesense: Added configuration of DACCHnEN and DACSTARTUP bits in
+   LESENSE->PERCTRL in LESENSE_Init() and init struct. Also changed
+   default values for LESENSE_AltExDesc_TypeDef and
+   LESENSE_ChDesc_TypeDef to be disabled by default.
+
+5.1.3:
+ - No changes.
+
+5.1.2:
+ Misc. bugfixes and improvements.
+
+5.1.1:
+ - Enabled errata CMU_E113 workaround for EFM32GG revE.
+
+5.1.0:
+ - em_timer: Added support for WTIMER0 and WTIMER1. Added EFM_ASSERT in
+   em_timer to check that operations on a 16 bit timer is always <= 0xFFFF.
+ - em_usart: Updated the baudrate sync calculation in USART_BaudrateSyncSet().
+   The calculated baudrate is not using any fractional bits and it is always
+   lower than or equal to the specified frequency.
+ - em_emu: added function EMU_DCDCConductionModeSet() to allow switching
+   between DCDC Low-Noise Continuous Conduction Mode (CCM) and
+   Discontinuous Conduction Mode (DCM).
+ - SYSTEM_GetSRAMSize() updated to return size of SRAM excluding RAMH for EFR32xG1.
+ - em_csen: Added support for CSEN (Capacitive Sense Module).
+ - em_adc: updated ADC_PosSel_TypeDef enum names.
+ - em_vdac: Added support for VDAC (voltage DAC).
+ - em_smu: Added support for SMU (Security Management Unit) module.
+   SMU is used to restrict access to device peripherals.
+ - Updated emlib to use the _SILICON_LABS_32B_SERIES_x,
+   _SILICON_LABS_32B_SERIES_x_CONFIG and _SILICON_LABS_GECKO_INTERNAL_SDID_x
+   macros instead of the _SILICON_LABS_32B_PLATFORM_x and
+   _SILICON_LABS_32B_PLATFORM_x_GEN_x macros.
+ - em_rtcc: added workarounds for errata RTCC_E203 and RTCC_E204 for
+   EFR32xG12, EFM32xG12, EFR32xG13 and EFM32xG13 devices.
+ - em_lesense: added LESENSE_DecoderPrsOut() for configuring PRS output
+   from the LESENSE decoder on EFM32xG12 and EFR32xG12.
+ - em_lesense: added support for the new evaluation modes for EFM32xG12 and
+   EFR32xG12.
+ - em_emu: added EMU_RamPowerDown() function for powering down a memory range
+   and deprecating EMU_MemPwrDown().
+ - em_emu: added support for voltage scaling.
+ - em_emu: added support for EM2 and 3 peripheral retention control.
+ - em_chip: added current consumption fixes for EFM32xG12 and EFR32xG12.
+ - em_emu: added support for DCDC EM01-LP mode.
+ - em_lesense: Support for Series 1 devices
+ - em_acmp: Added ACMP_ExternalInputSelect() which is used when the ACMP is
+   controlled by an external module like LESENSE.
+
 5.0.0:
  - em_core: New module, contains API for enabling/disabling interrupts
    and implementing critical regions.

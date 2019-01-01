@@ -1,6 +1,3 @@
-
-/** \addtogroup netsocket */
-/** @{*/
 /* NetworkStack
  * Copyright (c) 2015 ARM Limited
  *
@@ -22,6 +19,7 @@
 
 #include "netsocket/nsapi_types.h"
 #include "netsocket/SocketAddress.h"
+#include "Callback.h"
 
 // Predeclared class
 class NetworkStack;
@@ -30,9 +28,13 @@ class NetworkStack;
 /** NetworkInterface class
  *
  *  Common interface that is shared between network devices
+ *  @addtogroup netsocket
  */
 class NetworkInterface {
 public:
+
+
+
     virtual ~NetworkInterface() {};
 
     /** Get the local MAC address
@@ -73,10 +75,10 @@ public:
      *  Implicitly disables DHCP, which can be enabled in set_dhcp.
      *  Requires that the network is disconnected.
      *
-     *  @param address  Null-terminated representation of the local IP address
-     *  @param netmask  Null-terminated representation of the local network mask
-     *  @param gateway  Null-terminated representation of the local gateway
-     *  @return         0 on success, negative error code on failure
+     *  @param ip_address Null-terminated representation of the local IP address
+     *  @param netmask    Null-terminated representation of the local network mask
+     *  @param gateway    Null-terminated representation of the local gateway
+     *  @return           0 on success, negative error code on failure
      */
     virtual nsapi_error_t set_network(
             const char *ip_address, const char *netmask, const char *gateway);
@@ -123,10 +125,30 @@ public:
 
     /** Add a domain name server to list of servers to query
      *
-     *  @param addr     Destination for the host address
+     *  @param address  Destination for the host address
      *  @return         0 on success, negative error code on failure
      */
     virtual nsapi_error_t add_dns_server(const SocketAddress &address);
+
+    /** Register callback for status reporting
+     *
+     *  @param status_cb The callback for status changes
+     */
+    virtual void attach(mbed::Callback<void(nsapi_event_t, intptr_t)> status_cb);
+
+    /** Get the connection status
+     *
+     *  @return         The connection status according to ConnectionStatusType
+     */
+    virtual nsapi_connection_status_t get_connection_status() const;
+
+    /** Set blocking status of connect() which by default should be blocking
+     *
+     *  @param blocking true if connect is blocking
+     *  @return         0 on success, negative error code on failure
+     */
+    virtual nsapi_error_t set_blocking(bool blocking);
+
 
 protected:
     friend class Socket;
@@ -146,5 +168,3 @@ protected:
 
 
 #endif
-
-/** @}*/

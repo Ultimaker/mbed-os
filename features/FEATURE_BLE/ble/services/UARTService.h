@@ -45,13 +45,13 @@ extern const uint8_t  UARTServiceRXCharacteristicUUID[UUID::LENGTH_OF_LONG_UUID]
 */
 class UARTService {
 public:
-    /**< Maximum length of data (in bytes) that the UART service module can transmit to the peer. */
+    /** Maximum length of data (in bytes) that the UART service module can transmit to the peer. */
     static const unsigned BLE_UART_SERVICE_MAX_DATA_LEN = (BLE_GATT_MTU_SIZE_DEFAULT - 3);
 
 public:
 
     /**
-    * @param[ref] ble
+    * @param _ble
     *               BLE object for the underlying controller.
     */
     UARTService(BLE &_ble) :
@@ -98,7 +98,7 @@ public:
      * a long read request; this is because notifications include only the first
      * 20 bytes of the updated data.
      *
-     * @param  buffer The received update.
+     * @param  _buffer The received update.
      * @param  length Number of characters to be appended.
      * @return        Number of characters appended to the rxCharacteristic.
      */
@@ -138,6 +138,19 @@ public:
      */
     size_t writeString(const char *str) {
         return write(str, strlen(str));
+    }
+
+    /**
+     * Flush sendBuffer, i.e., forcefully write its contents to the UART RX
+     * characteristic even if the buffer is not full.
+     */
+    void flush() {
+        if (ble.getGapState().connected) {
+            if (sendBufferIndex != 0) {
+                ble.gattServer().write(getRXCharacteristicHandle(), static_cast<const uint8_t *>(sendBuffer), sendBufferIndex);
+                sendBufferIndex = 0;
+            }
+        }
     }
 
     /**

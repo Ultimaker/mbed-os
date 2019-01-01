@@ -260,6 +260,21 @@ int spi_master_write(spi_t *obj, int value) {
     return spi_read(obj);
 }
 
+int spi_master_block_write(spi_t *obj, const char *tx_buffer, int tx_length,
+                           char *rx_buffer, int rx_length, char write_fill) {
+    int total = (tx_length > rx_length) ? tx_length : rx_length;
+
+    for (int i = 0; i < total; i++) {
+        char out = (i < tx_length) ? tx_buffer[i] : write_fill;
+        char in = spi_master_write(obj, out);
+        if (i < rx_length) {
+            rx_buffer[i] = in;
+        }
+    }
+
+    return total;
+}
+
 int spi_slave_receive(spi_t *obj) {
     return (spi_readable(obj) && !spi_busy(obj)) ? (1) : (0);
 }
@@ -432,6 +447,7 @@ static void spi_irqs_set(spi_t *obj, uint32_t enable)
         if (enable) {
             InterruptHandlerRegister(irqTable[i], handlerTable[i]);
             GIC_SetPriority(irqTable[i], 5);
+            GIC_SetConfiguration(irqTable[i], 1);
             GIC_EnableIRQ(irqTable[i]);
         } else {
             GIC_DisableIRQ(irqTable[i]);

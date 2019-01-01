@@ -1,9 +1,9 @@
 /***************************************************************************//**
  * @file em_acmp.h
  * @brief Analog Comparator (ACMP) peripheral API
- * @version 5.0.0
+ * @version 5.3.3
  *******************************************************************************
- * @section License
+ * # License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
@@ -95,8 +95,7 @@ extern "C" {
 
 /** Resistor values used for the internal capacative sense resistor. See the
  *  datasheet for your device for details on each resistor value. */
-typedef enum
-{
+typedef enum {
   acmpResistor0 = _ACMP_INPUTSEL_CSRESSEL_RES0,   /**< Resistor value 0 */
   acmpResistor1 = _ACMP_INPUTSEL_CSRESSEL_RES1,   /**< Resistor value 1 */
   acmpResistor2 = _ACMP_INPUTSEL_CSRESSEL_RES2,   /**< Resistor value 2 */
@@ -111,8 +110,7 @@ typedef enum
 
 /** Hysteresis level. See datasheet for your device for details on each
  *  level. */
-typedef enum
-{
+typedef enum {
 #if defined(_ACMP_CTRL_HYSTSEL_MASK)
   acmpHysteresisLevel0 = _ACMP_CTRL_HYSTSEL_HYST0,       /**< Hysteresis level 0 */
   acmpHysteresisLevel1 = _ACMP_CTRL_HYSTSEL_HYST1,       /**< Hysteresis level 1 */
@@ -146,8 +144,7 @@ typedef enum
 #if defined(_ACMP_CTRL_WARMTIME_MASK)
 /** ACMP warmup time. The delay is measured in HFPERCLK cycles and should
  *  be at least 10 us. */
-typedef enum
-{
+typedef enum {
   /** 4 HFPERCLK cycles warmup */
   acmpWarmTime4   = _ACMP_CTRL_WARMTIME_4CYCLES,
   /** 8 HFPERCLK cycles warmup */
@@ -171,8 +168,7 @@ typedef enum
 /**
  * Adjust performance of the ACMP for a given input voltage range
  */
-typedef enum
-{
+typedef enum {
   acmpInputRangeFull = _ACMP_CTRL_INPUTRANGE_FULL,      /**< Input can be from 0 to Vdd */
   acmpInputRangeHigh = _ACMP_CTRL_INPUTRANGE_GTVDDDIV2, /**< Input will always be greater than Vdd/2 */
   acmpInputRangeLow  = _ACMP_CTRL_INPUTRANGE_LTVDDDIV2  /**< Input will always be less than Vdd/2 */
@@ -183,12 +179,11 @@ typedef enum
 /**
  * ACMP Power source.
  */
-typedef enum
-{
-  acmpPowerSourceAvdd    = _ACMP_CTRL_PWRSEL_AVDD,    /**< Power the ACMP using the AVDD supply */
-  acmpPowerSourceVddVreg = _ACMP_CTRL_PWRSEL_VREGVDD, /**< Power the ACMP using the VREGVDD supply */
-  acmpPowerSourceIOVdd0  = _ACMP_CTRL_PWRSEL_IOVDD0,  /**< Power the ACMP using the IOVDD/IOVDD0 supply */
-  acmpPowerSourceIOVdd1  = _ACMP_CTRL_PWRSEL_IOVDD1,  /**< Power the ACMP using the IOVDD1 supply (if part has two I/O voltages) */
+typedef enum {
+  acmpPowerSourceAvdd      = _ACMP_CTRL_PWRSEL_AVDD,    /**< Power the ACMP using the AVDD supply */
+  acmpPowerSourceVddVreg   = _ACMP_CTRL_PWRSEL_VREGVDD, /**< Power the ACMP using the VREGVDD supply */
+  acmpPowerSourceIOVdd0    = _ACMP_CTRL_PWRSEL_IOVDD0,  /**< Power the ACMP using the IOVDD/IOVDD0 supply */
+  acmpPowerSourceIOVdd1    = _ACMP_CTRL_PWRSEL_IOVDD1,  /**< Power the ACMP using the IOVDD1 supply (if part has two I/O voltages) */
 } ACMP_PowerSource_TypeDef;
 #endif
 
@@ -196,8 +191,7 @@ typedef enum
 /**
  * ACMP accuracy mode.
  */
-typedef enum
-{
+typedef enum {
   acmpAccuracyLow = _ACMP_CTRL_ACCURACY_LOW,   /**< Low-accuracy mode but consume less current */
   acmpAccuracyHigh = _ACMP_CTRL_ACCURACY_HIGH  /**< High-accuracy mode but consume more current */
 } ACMP_Accuracy_TypeDef;
@@ -206,8 +200,7 @@ typedef enum
 #if defined(_ACMP_INPUTSEL_VASEL_MASK)
 /** ACMP Input to the VA divider. This enum is used to select the input for
  *  the VA Divider */
-typedef enum
-{
+typedef enum {
   acmpVAInputVDD       = _ACMP_INPUTSEL_VASEL_VDD,
   acmpVAInputAPORT2YCH0  = _ACMP_INPUTSEL_VASEL_APORT2YCH0,
   acmpVAInputAPORT2YCH2  = _ACMP_INPUTSEL_VASEL_APORT2YCH2,
@@ -265,8 +258,7 @@ typedef enum
  * ACMP Input to the VB divider. This enum is used to select the input for
  * the VB divider.
  */
-typedef enum
-{
+typedef enum {
   acmpVBInput1V25 = _ACMP_INPUTSEL_VBSEL_1V25,
   acmpVBInput2V5  = _ACMP_INPUTSEL_VBSEL_2V5
 } ACMP_VBInput_TypeDef;
@@ -276,17 +268,15 @@ typedef enum
 /**
  * ACMP Low-Power Input Selection.
  */
-typedef enum
-{
+typedef enum {
   acmpVLPInputVADIV = _ACMP_INPUTSEL_VLPSEL_VADIV,
   acmpVLPInputVBDIV = _ACMP_INPUTSEL_VLPSEL_VBDIV
 } ACMP_VLPInput_Typedef;
 #endif
 
-#if defined(_SILICON_LABS_32B_PLATFORM_2)
+#if defined(_ACMP_INPUTSEL_POSSEL_APORT0XCH0)
 /** ACMP Input Selection */
-typedef enum
-{
+typedef enum {
   acmpInputAPORT0XCH0  = _ACMP_INPUTSEL_POSSEL_APORT0XCH0,
   acmpInputAPORT0XCH1  = _ACMP_INPUTSEL_POSSEL_APORT0XCH1,
   acmpInputAPORT0XCH2  = _ACMP_INPUTSEL_POSSEL_APORT0XCH2,
@@ -447,8 +437,12 @@ typedef enum
   acmpInputAPORT4YCH14 = _ACMP_INPUTSEL_POSSEL_APORT4YCH14,
   acmpInputAPORT4XCH15 = _ACMP_INPUTSEL_POSSEL_APORT4XCH15,
   acmpInputAPORT4XCH31 = _ACMP_INPUTSEL_POSSEL_APORT4XCH31,
+#if defined(_ACMP_INPUTSEL_POSSEL_DACOUT0)
   acmpInputDACOUT0   = _ACMP_INPUTSEL_POSSEL_DACOUT0,
+#endif
+#if defined(_ACMP_INPUTSEL_POSSEL_DACOUT1)
   acmpInputDACOUT1   = _ACMP_INPUTSEL_POSSEL_DACOUT1,
+#endif
   acmpInputVLP       = _ACMP_INPUTSEL_POSSEL_VLP,
   acmpInputVBDIV     = _ACMP_INPUTSEL_POSSEL_VBDIV,
   acmpInputVADIV     = _ACMP_INPUTSEL_POSSEL_VADIV,
@@ -458,8 +452,7 @@ typedef enum
 #else
 /** ACMP inputs. Note that scaled VDD and bandgap references can only be used
  *  as negative inputs. */
-typedef enum
-{
+typedef enum {
   /** Channel 0 */
   acmpChannel0    = _ACMP_INPUTSEL_NEGSEL_CH0,
   /** Channel 1 */
@@ -500,13 +493,36 @@ typedef enum
 } ACMP_Channel_TypeDef;
 #endif
 
+#if defined(_ACMP_EXTIFCTRL_MASK)
+/**
+ * ACMP External input select. This type is used to select which APORT that is
+ * used by an external module like LESENSE when it's taking control over
+ * the ACMP input.
+ */
+typedef enum {
+  acmpExternalInputAPORT0X  = _ACMP_EXTIFCTRL_APORTSEL_APORT0X,
+  acmpExternalInputAPORT0Y  = _ACMP_EXTIFCTRL_APORTSEL_APORT0Y,
+  acmpExternalInputAPORT1X  = _ACMP_EXTIFCTRL_APORTSEL_APORT1X,
+  acmpExternalInputAPORT1Y  = _ACMP_EXTIFCTRL_APORTSEL_APORT1Y,
+  acmpExternalInputAPORT1XY = _ACMP_EXTIFCTRL_APORTSEL_APORT1XY,
+  acmpExternalInputAPORT2X  = _ACMP_EXTIFCTRL_APORTSEL_APORT2X,
+  acmpExternalInputAPORT2Y  = _ACMP_EXTIFCTRL_APORTSEL_APORT2Y,
+  acmpExternalInputAPORT2YX = _ACMP_EXTIFCTRL_APORTSEL_APORT2YX,
+  acmpExternalInputAPORT3X  = _ACMP_EXTIFCTRL_APORTSEL_APORT3X,
+  acmpExternalInputAPORT3Y  = _ACMP_EXTIFCTRL_APORTSEL_APORT3Y,
+  acmpExternalInputAPORT3XY = _ACMP_EXTIFCTRL_APORTSEL_APORT3XY,
+  acmpExternalInputAPORT4X  = _ACMP_EXTIFCTRL_APORTSEL_APORT4X,
+  acmpExternalInputAPORT4Y  = _ACMP_EXTIFCTRL_APORTSEL_APORT4Y,
+  acmpExternalInputAPORT4YX = _ACMP_EXTIFCTRL_APORTSEL_APORT4YX,
+} ACMP_ExternalInput_Typedef;
+#endif
+
 /*******************************************************************************
  ******************************   STRUCTS   ************************************
  ******************************************************************************/
 
 /** Capsense initialization structure. */
-typedef struct
-{
+typedef struct {
   /** Full bias current. See the ACMP chapter about bias and response time in
    *  the reference manual for details. */
   bool                          fullBias;
@@ -578,47 +594,46 @@ typedef struct
 
 /** Default config for capacitive sense mode initialization. */
 #if defined(_ACMP_HYSTERESIS0_HYST_MASK)
-#define ACMP_CAPSENSE_INIT_DEFAULT                                          \
-{                                                                           \
-  false,                /* Don't use fullBias to lower power consumption */ \
-  0x20,                 /* Using biasProg value of 0x20 (32) */             \
-  acmpHysteresisLevel8, /* Use hysteresis level 8 when ACMP output is 0 */  \
-  acmpHysteresisLevel8, /* Use hysteresis level 8 when ACMP output is 1 */  \
-  acmpResistor5,        /* Use internal resistor value 5 */                 \
-  0x30,                 /* VDD level high */                                \
-  0x10,                 /* VDD level low */                                 \
-  true                  /* Enable after init. */                            \
-}
+#define ACMP_CAPSENSE_INIT_DEFAULT                                           \
+  {                                                                          \
+    false,              /* Don't use fullBias to lower power consumption */  \
+    0x20,               /* Using biasProg value of 0x20 (32) */              \
+    acmpHysteresisLevel8, /* Use hysteresis level 8 when ACMP output is 0 */ \
+    acmpHysteresisLevel8, /* Use hysteresis level 8 when ACMP output is 1 */ \
+    acmpResistor5,      /* Use internal resistor value 5 */                  \
+    0x30,               /* VDD level high */                                 \
+    0x10,               /* VDD level low */                                  \
+    true                /* Enable after init. */                             \
+  }
 #elif defined(_ACMP_CTRL_WARMTIME_MASK)
 #define ACMP_CAPSENSE_INIT_DEFAULT                      \
-{                                                       \
-  false,              /* fullBias */                    \
-  false,              /* halfBias */                    \
-  0x7,                /* biasProg */                    \
-  acmpWarmTime512,    /* 512 cycle warmup to be safe */ \
-  acmpHysteresisLevel5,                                 \
-  acmpResistor3,                                        \
-  false,              /* low power reference */         \
-  0x3D,               /* VDD level */                   \
-  true                /* Enable after init. */          \
-}
+  {                                                     \
+    false,            /* fullBias */                    \
+    false,            /* halfBias */                    \
+    0x7,              /* biasProg */                    \
+    acmpWarmTime512,  /* 512 cycle warmup to be safe */ \
+    acmpHysteresisLevel5,                               \
+    acmpResistor3,                                      \
+    false,            /* low power reference */         \
+    0x3D,             /* VDD level */                   \
+    true              /* Enable after init. */          \
+  }
 #else
-#define ACMP_CAPSENSE_INIT_DEFAULT                      \
-{                                                       \
-  false,              /* fullBias */                    \
-  false,              /* halfBias */                    \
-  0x7,                /* biasProg */                    \
-  acmpHysteresisLevel5,                                 \
-  acmpResistor3,                                        \
-  false,              /* low power reference */         \
-  0x3D,               /* VDD level */                   \
-  true                /* Enable after init. */          \
-}
+#define ACMP_CAPSENSE_INIT_DEFAULT              \
+  {                                             \
+    false,            /* fullBias */            \
+    false,            /* halfBias */            \
+    0x7,              /* biasProg */            \
+    acmpHysteresisLevel5,                       \
+    acmpResistor3,                              \
+    false,            /* low power reference */ \
+    0x3D,             /* VDD level */           \
+    true              /* Enable after init. */  \
+  }
 #endif
 
 /** ACMP initialization structure. */
-typedef struct
-{
+typedef struct {
   /** Full bias current. See the ACMP chapter about bias and response time in
    *  the reference manual for details. */
   bool                         fullBias;
@@ -702,56 +717,55 @@ typedef struct
 /** Default config for ACMP regular initialization. */
 #if defined(_ACMP_HYSTERESIS0_HYST_MASK)
 #define ACMP_INIT_DEFAULT                                                   \
-{                                                                           \
-  false,                      /* fullBias */                                \
-  0x7,                        /* biasProg */                                \
-  false,                      /* No interrupt on falling edge. */           \
-  false,                      /* No interrupt on rising edge. */            \
-  acmpInputRangeFull,         /* Input range from 0 to Vdd. */              \
-  acmpAccuracyLow,            /* Low accuracy, less current usage. */       \
-  acmpPowerSourceAvdd,        /* Use the AVDD supply. */                    \
-  acmpHysteresisLevel5,       /* Use hysteresis level 5 when output is 0 */ \
-  acmpHysteresisLevel5,       /* Use hysteresis level 5 when output is 1 */ \
-  acmpVLPInputVADIV,          /* Use VADIV as the VLP input source. */      \
-  false,                      /* Output 0 when ACMP is inactive. */         \
-  true                        /* Enable after init. */                      \
-}
+  {                                                                         \
+    false,                    /* fullBias */                                \
+    0x7,                      /* biasProg */                                \
+    false,                    /* No interrupt on falling edge. */           \
+    false,                    /* No interrupt on rising edge. */            \
+    acmpInputRangeFull,       /* Input range from 0 to Vdd. */              \
+    acmpAccuracyLow,          /* Low accuracy, less current usage. */       \
+    acmpPowerSourceAvdd,      /* Use the AVDD supply. */                    \
+    acmpHysteresisLevel5,     /* Use hysteresis level 5 when output is 0 */ \
+    acmpHysteresisLevel5,     /* Use hysteresis level 5 when output is 1 */ \
+    acmpVLPInputVADIV,        /* Use VADIV as the VLP input source. */      \
+    false,                    /* Output 0 when ACMP is inactive. */         \
+    true                      /* Enable after init. */                      \
+  }
 #elif defined(_ACMP_CTRL_WARMTIME_MASK)
 #define ACMP_INIT_DEFAULT                                                   \
-{                                                                           \
-  false,              /* fullBias */                                        \
-  false,              /* halfBias */                                        \
-  0x7,                /* biasProg */                                        \
-  false,              /* No interrupt on falling edge. */                   \
-  false,              /* No interrupt on rising edge. */                    \
-  acmpWarmTime512,    /* 512 cycle warmup to be safe */                     \
-  acmpHysteresisLevel5,                                                     \
-  false,              /* Disabled emitting inactive value during warmup. */ \
-  false,              /* low power reference */                             \
-  0x3D,               /* VDD level */                                       \
-  true                /* Enable after init. */                              \
-}
+  {                                                                         \
+    false,            /* fullBias */                                        \
+    false,            /* halfBias */                                        \
+    0x7,              /* biasProg */                                        \
+    false,            /* No interrupt on falling edge. */                   \
+    false,            /* No interrupt on rising edge. */                    \
+    acmpWarmTime512,  /* 512 cycle warmup to be safe */                     \
+    acmpHysteresisLevel5,                                                   \
+    false,            /* Disabled emitting inactive value during warmup. */ \
+    false,            /* low power reference */                             \
+    0x3D,             /* VDD level */                                       \
+    true              /* Enable after init. */                              \
+  }
 #else
 #define ACMP_INIT_DEFAULT                                                   \
-{                                                                           \
-  false,              /* fullBias */                                        \
-  false,              /* halfBias */                                        \
-  0x7,                /* biasProg */                                        \
-  false,              /* No interrupt on falling edge. */                   \
-  false,              /* No interrupt on rising edge. */                    \
-  acmpHysteresisLevel5,                                                     \
-  false,              /* Disabled emitting inactive value during warmup. */ \
-  false,              /* low power reference */                             \
-  0x3D,               /* VDD level */                                       \
-  true                /* Enable after init. */                              \
-}
+  {                                                                         \
+    false,            /* fullBias */                                        \
+    false,            /* halfBias */                                        \
+    0x7,              /* biasProg */                                        \
+    false,            /* No interrupt on falling edge. */                   \
+    false,            /* No interrupt on rising edge. */                    \
+    acmpHysteresisLevel5,                                                   \
+    false,            /* Disabled emitting inactive value during warmup. */ \
+    false,            /* low power reference */                             \
+    0x3D,             /* VDD level */                                       \
+    true              /* Enable after init. */                              \
+  }
 #endif
 
 #if defined(_ACMP_INPUTSEL_VASEL_MASK)
 /** VA Configuration structure. This struct is used to configure the
  *  VA voltage input source and it's dividers. */
-typedef struct
-{
+typedef struct {
   ACMP_VAInput_TypeDef input; /**< VA voltage input source */
 
   /**
@@ -773,19 +787,18 @@ typedef struct
   uint32_t             div1;
 } ACMP_VAConfig_TypeDef;
 
-#define ACMP_VACONFIG_DEFAULT                                               \
-{                                                                           \
-  acmpVAInputVDD, /* Use Vdd as VA voltage input source */                  \
-  63,             /* No division of the VA source when ACMP output is 0 */  \
-  63,             /* No division of the VA source when ACMP output is 1 */  \
-}
+#define ACMP_VACONFIG_DEFAULT                                              \
+  {                                                                        \
+    acmpVAInputVDD, /* Use Vdd as VA voltage input source */               \
+    63,           /* No division of the VA source when ACMP output is 0 */ \
+    63,           /* No division of the VA source when ACMP output is 1 */ \
+  }
 #endif
 
 #if defined(_ACMP_INPUTSEL_VBSEL_MASK)
 /** VB Configuration structure. This struct is used to configure the
  *  VB voltage input source and it's dividers. */
-typedef struct
-{
+typedef struct {
   ACMP_VBInput_TypeDef input; /**< VB Voltage input source */
 
   /**
@@ -808,11 +821,11 @@ typedef struct
 } ACMP_VBConfig_TypeDef;
 
 #define ACMP_VBCONFIG_DEFAULT                                               \
-{                                                                           \
-  acmpVBInput1V25, /* Use 1.25 V as VB voltage input source */              \
-  63,              /* No division of the VB source when ACMP output is 0 */ \
-  63,              /* No division of the VB source when ACMP output is 1 */ \
-}
+  {                                                                         \
+    acmpVBInput1V25, /* Use 1.25 V as VB voltage input source */            \
+    63,            /* No division of the VB source when ACMP output is 0 */ \
+    63,            /* No division of the VB source when ACMP output is 1 */ \
+  }
 #endif
 
 /*******************************************************************************
@@ -824,6 +837,9 @@ void ACMP_CapsenseChannelSet(ACMP_TypeDef *acmp, ACMP_Channel_TypeDef channel);
 void ACMP_ChannelSet(ACMP_TypeDef *acmp, ACMP_Channel_TypeDef negSel, ACMP_Channel_TypeDef posSel);
 void ACMP_Disable(ACMP_TypeDef *acmp);
 void ACMP_Enable(ACMP_TypeDef *acmp);
+#if defined(_ACMP_EXTIFCTRL_MASK)
+void ACMP_ExternalInputSelect(ACMP_TypeDef *acmp, ACMP_ExternalInput_Typedef aport);
+#endif
 void ACMP_GPIOSetup(ACMP_TypeDef *acmp, uint32_t location, bool enable, bool invert);
 void ACMP_Init(ACMP_TypeDef *acmp, const ACMP_Init_TypeDef *init);
 void ACMP_Reset(ACMP_TypeDef *acmp);
@@ -851,7 +867,6 @@ __STATIC_INLINE void ACMP_IntClear(ACMP_TypeDef *acmp, uint32_t flags)
   acmp->IFC = flags;
 }
 
-
 /***************************************************************************//**
  * @brief
  *   Disable one or more ACMP interrupts.
@@ -868,7 +883,6 @@ __STATIC_INLINE void ACMP_IntDisable(ACMP_TypeDef *acmp, uint32_t flags)
 {
   acmp->IEN &= ~(flags);
 }
-
 
 /***************************************************************************//**
  * @brief
@@ -892,7 +906,6 @@ __STATIC_INLINE void ACMP_IntEnable(ACMP_TypeDef *acmp, uint32_t flags)
   acmp->IEN |= flags;
 }
 
-
 /***************************************************************************//**
  * @brief
  *   Get pending ACMP interrupt flags.
@@ -912,7 +925,6 @@ __STATIC_INLINE uint32_t ACMP_IntGet(ACMP_TypeDef *acmp)
 {
   return acmp->IF;
 }
-
 
 /***************************************************************************//**
  * @brief
@@ -944,7 +956,6 @@ __STATIC_INLINE uint32_t ACMP_IntGetEnabled(ACMP_TypeDef *acmp)
   /* Bitwise AND of pending and enabled interrupts */
   return acmp->IF & tmp;
 }
-
 
 /***************************************************************************//**
  * @brief

@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_eth.c
   * @author  MCD Application Team
-  * @version V1.1.2
-  * @date    23-September-2016 
+  * @version V1.2.2
+  * @date    14-April-2017
   * @brief   ETH HAL module driver.
   *          This file provides firmware functions to manage the following 
   *          functionalities of the Ethernet (ETH) peripheral:
@@ -68,7 +68,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -717,6 +717,8 @@ HAL_StatusTypeDef HAL_ETH_TransmitFrame(ETH_HandleTypeDef *heth, uint32_t FrameL
     heth->TxDesc->Status |=ETH_DMATXDESC_FS|ETH_DMATXDESC_LS;
     /* Set frame size */
     heth->TxDesc->ControlBufferSize = (FrameLength & ETH_DMATXDESC_TBS1);
+    /* Ensure rest of descriptor is written to RAM before the OWN bit */
+    __DMB();
     /* Set Own bit of the Tx descriptor Status: gives the buffer back to ETHERNET DMA */
     heth->TxDesc->Status |= ETH_DMATXDESC_OWN;
     /* Point to next descriptor */
@@ -746,6 +748,8 @@ HAL_StatusTypeDef HAL_ETH_TransmitFrame(ETH_HandleTypeDef *heth, uint32_t FrameL
         heth->TxDesc->ControlBufferSize = (size & ETH_DMATXDESC_TBS1);
       }
       
+      /* Ensure rest of descriptor is written to RAM before the OWN bit */
+      __DMB();
       /* Set Own bit of the Tx descriptor Status: gives the buffer back to ETHERNET DMA */
       heth->TxDesc->Status |= ETH_DMATXDESC_OWN;
       /* point to next descriptor */
@@ -753,6 +757,9 @@ HAL_StatusTypeDef HAL_ETH_TransmitFrame(ETH_HandleTypeDef *heth, uint32_t FrameL
     }
   }
   
+  /* Ensure all descriptors are written to RAM before checking transmitter status */
+  __DMB();
+
   /* When Tx Buffer unavailable flag is set: clear it and resume transmission */
   if (((heth->Instance)->DMASR & ETH_DMASR_TBUS) != (uint32_t)RESET)
   {

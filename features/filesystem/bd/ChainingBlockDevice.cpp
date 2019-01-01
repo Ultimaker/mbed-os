@@ -109,7 +109,7 @@ int ChainingBlockDevice::read(void *b, bd_addr_t addr, bd_size_t size)
             size -= read;
         }
 
-        addr -= size;
+        addr -= bdsize;
     }
 
     return 0;
@@ -140,7 +140,7 @@ int ChainingBlockDevice::program(const void *b, bd_addr_t addr, bd_size_t size)
             size -= program;
         }
 
-        addr -= size;
+        addr -= bdsize;
     }
 
     return 0;
@@ -169,7 +169,7 @@ int ChainingBlockDevice::erase(bd_addr_t addr, bd_size_t size)
             size -= erase;
         }
 
-        addr -= size;
+        addr -= bdsize;
     }
 
     return 0;
@@ -190,7 +190,7 @@ bd_size_t ChainingBlockDevice::get_erase_size() const
     return _erase_size;
 }
 
-bd_size_t ChainingBlockDevice::size()
+bd_size_t ChainingBlockDevice::size() const
 {
     return _size;
 }
