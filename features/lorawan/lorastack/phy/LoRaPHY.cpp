@@ -307,7 +307,7 @@ lorawan_time_t LoRaPHY::update_band_timeoff(bool joined, bool duty_cycle,
     return next_tx_delay;
 }
 
-uint8_t LoRaPHY::parse_link_ADR_req(uint8_t* payload, link_adr_params_t* params)
+uint8_t LoRaPHY::parse_link_ADR_req(const uint8_t* payload, link_adr_params_t* params)
 {
     uint8_t ret_index = 0;
 
@@ -808,7 +808,7 @@ void LoRaPHY::compute_rx_win_params(int8_t datarate, uint8_t min_rx_symbols,
                          &rx_conf_params->window_timeout, &rx_conf_params->window_offset);
 }
 
-bool LoRaPHY::rx_config(rx_config_params_t* rx_conf, int8_t* datarate)
+bool LoRaPHY::rx_config(rx_config_params_t* rx_conf)
 {
     radio_modems_t modem;
     uint8_t dr = rx_conf->datarate;
@@ -868,8 +868,6 @@ bool LoRaPHY::rx_config(rx_config_params_t* rx_conf, int8_t* datarate)
 
     _radio->unlock();
 
-    *datarate = phy_dr;
-
     return true;
 }
 
@@ -883,9 +881,7 @@ bool LoRaPHY::tx_config(tx_config_params_t* tx_conf, int8_t* tx_power,
     band_t *bands = (band_t *)phy_params.bands.table;
 
     // limit TX power if set to too much
-    if (tx_conf->tx_power > bands[band_idx].max_tx_pwr) {
-        tx_conf->tx_power = bands[band_idx].max_tx_pwr;
-    }
+    tx_conf->tx_power = MAX(tx_conf->tx_power, bands[band_idx].max_tx_pwr);
 
     uint8_t bandwidth = get_bandwidth(tx_conf->datarate);
     int8_t phy_tx_power = 0;

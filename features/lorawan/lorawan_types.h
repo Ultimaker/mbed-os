@@ -35,6 +35,18 @@
 #include "platform/Callback.h"
 
 /**
+ * Option Flags for send(), receive() APIs
+ *
+ * Special Notes for UPLINK:
+ *  i)  All of the flags are mutually exclusive.
+ *  ii) MSG_MULTICAST_FLAG cannot be used.
+ */
+#define MSG_UNCONFIRMED_FLAG                  0x01
+#define MSG_CONFIRMED_FLAG                    0x02
+#define MSG_MULTICAST_FLAG                    0x04
+#define MSG_PROPRIETARY_FLAG                  0x08
+
+/**
  * LoRaWAN device classes definition.
  *
  * LoRaWAN Specification V1.0.2, chapter 2.1.
@@ -240,8 +252,17 @@ typedef struct  {
       * Optional
       */
      mbed::Callback<void(uint8_t, uint8_t)> link_check_resp;
+
+     /**
+      * Battery level return value must follow the specification
+      * for DevStatusAns MAC command:
+      *
+      *     0       The end-device is connected to an external power source
+      *     1 - 254 The battery level, 1 being at minimum and 254 being at maximum
+      *     255     The end-device was not able to measure the battery level.
+      */
      mbed::Callback<uint8_t(void)> battery_level;
- } lorawan_app_callbacks_t;
+} lorawan_app_callbacks_t;
 
 /**
  * DO NOT MODIFY, WILL BREAK THE API!
