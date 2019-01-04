@@ -22,6 +22,16 @@
 #include <string.h>
 
 
+uint8_t equeue_sanity_check(const equeue_t *q)
+{
+    if (q->queue && q->queue->next && q->queue->next == q->queue)
+    {
+        MBED_ASSERT(0);
+    }
+    return 0;
+}
+
+
 // calculate the relative-difference between absolute times while
 // correctly handling overflow conditions
 static inline int equeue_tickdiff(unsigned a, unsigned b) {
@@ -200,12 +210,20 @@ void equeue_dealloc(equeue_t *q, void *p) {
 
 // equeue scheduling functions
 static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
+    equeue_mutex_lock(&q->queuelock);
+
+    if (e->next == e)
+    {
+        MBED_ASSERT(0);
+    }
+
     // setup event and hash local id with buffer offset for unique id
     int id = (e->id << q->npw2) | ((unsigned char *)e - q->buffer);
     e->target = tick + equeue_clampdiff(e->target, tick);
     e->generation = q->generation;
 
-    equeue_mutex_lock(&q->queuelock);
+
+        equeue_sanity_check(q);
 
     // find the event slot
     struct equeue_event **p = &q->queue;
@@ -213,14 +231,25 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
         p = &(*p)->next;
     }
 
+    equeue_sanity_check(q);
+
     // insert at head in slot
+    if (e->next == e)
+    {
+        MBED_ASSERT(0);
+    }
+
     e->next = *p;
     if (e->next) {
         e->next->ref = &e->next;
     }
 
+        equeue_sanity_check(q);
+
     *p = e;
     e->ref = p;
+
+        equeue_sanity_check(q);
 
     // notify background timer
     if ((q->background.update && q->background.active) &&
@@ -228,6 +257,8 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
         q->background.update(q->background.timer,
                 equeue_clampdiff(e->target, tick));
     }
+
+        equeue_sanity_check(q);
 
     equeue_mutex_unlock(&q->queuelock);
 
@@ -241,8 +272,12 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
 
     equeue_mutex_lock(&q->queuelock);
     if (e->id != id >> q->npw2) {
-        // Invalid id
-        q->nr_cancelled_invalid_ids++;
+        equeue_mutex_unlock(&q->queuelock);
+        return 0;
+    }
+
+    int diff = equeue_tickdiff(e->target, q->tick);
+    if (diff < 0 || (diff == 0 && e->generation != q->generation)) {
         equeue_mutex_unlock(&q->queuelock);
         return 0;
     }
@@ -251,30 +286,9 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
     if (e->period != -1)
     {
         q->nr_cancelled_periodic_events++;
-        equeue_mutex_unlock(&q->queuelock);
-        return 0;
     }
 
-    // Find event to unqueue in the pending events list
-    // This works only for single shot events, and periodic events must never be cancelled
-    struct equeue_event *event = q->queue;
-    while (event)
-    {
-        // Check event
-        if (event->id == e->id)
-        {
-            // Cancel event e
-            break;
-        }
-        // Next event
-        event = event->next;
-        // If e is not found in the queued event list then ignore unqueueing
-        if (!event)
-        {
-            equeue_mutex_unlock(&q->queuelock);
-            return 0;
-        }
-    }
+    equeue_sanity_check(q);
 
     // clear the event and check if already in-flight
     e->cb = 0;
@@ -286,6 +300,8 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
         e->next->ref = e->ref;
     }
 
+    equeue_sanity_check(q);
+
     equeue_incid(q, e);
     equeue_mutex_unlock(&q->queuelock);
 
@@ -294,6 +310,8 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
 
 static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
     equeue_mutex_lock(&q->queuelock);
+
+        equeue_sanity_check(q);
 
     // find all expired events and mark a new generation
     q->generation += 1;
@@ -311,6 +329,9 @@ static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
     if (q->queue) {
         q->queue->ref = &q->queue;
     }
+
+        equeue_sanity_check(q);
+
 
     *p = 0;
 
@@ -331,6 +352,8 @@ static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
         tail = &es->next;
     }
 
+        equeue_sanity_check(q);
+
     return head;
 }
 
@@ -338,6 +361,15 @@ int equeue_post(equeue_t *q, void (*cb)(void*), void *p) {
     struct equeue_event *e = (struct equeue_event*)p - 1;
     unsigned tick = equeue_tick();
     e->cb = cb;
+    if (e->period == -1)
+    {
+        // Single shot timeout
+        e->timeout = e->target;
+    }
+    else
+    {
+        e->timeout = e->period;
+    }
     e->target = tick + e->target;
 
     int id = equeue_enqueue(q, e, tick);

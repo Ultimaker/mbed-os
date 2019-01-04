@@ -41,9 +41,9 @@ struct equeue_event {
     unsigned size;
     uint8_t id;
     uint8_t generation;
+    uint32_t timeout;
 
     struct equeue_event *next;
-    struct equeue_event *sibling;
     struct equeue_event **ref;
 
     unsigned target;
