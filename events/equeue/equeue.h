@@ -41,9 +41,9 @@ struct equeue_event {
     unsigned size;
     uint8_t id;
     uint8_t generation;
-    uint32_t timeout;
 
     struct equeue_event *next;
+    struct equeue_event *sibling;
     struct equeue_event **ref;
 
     unsigned target;
@@ -58,7 +58,7 @@ struct equeue_event {
 typedef struct equeue {
     struct equeue_event *queue;
     unsigned tick;
-    unsigned breaks;
+    bool break_requested;
     uint8_t generation;
 
     unsigned char *buffer;
@@ -76,9 +76,6 @@ typedef struct equeue {
         void (*update)(void *timer, int ms);
         void *timer;
     } background;
-
-    uint32_t nr_cancelled_periodic_events; //! Counter for cancellation of periodic events
-    uint32_t nr_cancelled_invalid_ids; //! Counter for cancellation of invalid events
 
     equeue_sema_t eventsema;
     equeue_mutex_t queuelock;
@@ -190,6 +187,15 @@ int equeue_post(equeue_t *queue, void (*cb)(void *), void *event);
 // the event may have already begun executing.
 void equeue_cancel(equeue_t *queue, int id);
 
+// Query how much time is left for delayed event
+//
+//  If event is delayed, this function can be used to query how much time
+//  is left until the event is due to be dispatched.
+//
+//  This function is irq safe.
+//
+int equeue_timeleft(equeue_t *q, int id);
+
 // Background an event queue onto a single-shot timer
 //
 // The provided update function will be called to indicate when the queue
@@ -202,7 +208,7 @@ void equeue_cancel(equeue_t *queue, int id);
 // of hardware timers or even other event loops, allowing an event queue to
 // be effectively backgrounded.
 void equeue_background(equeue_t *queue,
-        void (*update)(void *timer, int ms), void *timer);
+                       void (*update)(void *timer, int ms), void *timer);
 
 // Chain an event queue onto another event queue
 //
@@ -214,7 +220,10 @@ void equeue_background(equeue_t *queue,
 //
 // The equeue_chain function allows multiple equeues to be composed, sharing
 // the context of a dispatch loop while still being managed independently.
-void equeue_chain(equeue_t *queue, equeue_t *target);
+//
+// If the event queue chaining fails, equeue_chain returns a negative,
+// platform-specific error code.
+int equeue_chain(equeue_t *queue, equeue_t *target);
 
 
 #ifdef __cplusplus
