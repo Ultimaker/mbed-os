@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 #include "equeue/equeue.h"
-#include "mbed_assert.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -24,19 +23,22 @@
 
 // calculate the relative-difference between absolute times while
 // correctly handling overflow conditions
-static inline int equeue_tickdiff(unsigned a, unsigned b) {
+static inline int equeue_tickdiff(unsigned a, unsigned b)
+{
     return (int)(unsigned)(a - b);
 }
 
 // calculate the relative-difference between absolute times, but
 // also clamp to zero, resulting in only non-zero values.
-static inline int equeue_clampdiff(unsigned a, unsigned b) {
+static inline int equeue_clampdiff(unsigned a, unsigned b)
+{
     int diff = equeue_tickdiff(a, b);
-    return ~(diff >> (8*sizeof(int)-1)) & diff;
+    return ~(diff >> (8 * sizeof(int) -1)) & diff;
 }
 
 // Increment the unique id in an event, hiding the event from cancel
-static inline void equeue_incid(equeue_t *q, struct equeue_event *e) {
+static inline void equeue_incid(equeue_t *q, struct equeue_event *e)
+{
     e->id += 1;
     if ((e->id << q->npw2) == 0) {
         e->id = 1;
@@ -45,7 +47,8 @@ static inline void equeue_incid(equeue_t *q, struct equeue_event *e) {
 
 
 // equeue lifetime management
-int equeue_create(equeue_t *q, size_t size) {
+int equeue_create(equeue_t *q, size_t size)
+{
     // dynamically allocate the specified buffer
     void *buffer = malloc(size);
     if (!buffer) {
@@ -57,7 +60,8 @@ int equeue_create(equeue_t *q, size_t size) {
     return err;
 }
 
-int equeue_create_inplace(equeue_t *q, size_t size, void *buffer) {
+int equeue_create_inplace(equeue_t *q, size_t size, void *buffer)
+{
     // setup queue around provided buffer
     q->buffer = buffer;
     q->allocated = 0;
@@ -74,14 +78,11 @@ int equeue_create_inplace(equeue_t *q, size_t size, void *buffer) {
     q->queue = 0;
     q->tick = equeue_tick();
     q->generation = 0;
-    q->breaks = 0;
+    q->break_requested = false;
 
     q->background.active = false;
     q->background.update = 0;
     q->background.timer = 0;
-
-    q->nr_cancelled_periodic_events; ///! Counter for cancellation of periodic events
-    q->nr_cancelled_invalid_ids; ///! Counter for cancellation of invalid events
 
     // initialize platform resources
     int err;
@@ -103,14 +104,19 @@ int equeue_create_inplace(equeue_t *q, size_t size, void *buffer) {
     return 0;
 }
 
-void equeue_destroy(equeue_t *q) {
+void equeue_destroy(equeue_t *q)
+{
     // call destructors on pending events
     for (struct equeue_event *es = q->queue; es; es = es->next) {
+        for (struct equeue_event *e = es->sibling; e; e = e->sibling) {
+            if (e->dtor) {
+                e->dtor(e + 1);
+            }
+        }
         if (es->dtor) {
             es->dtor(es + 1);
         }
     }
-
     // notify background timer
     if (q->background.update) {
         q->background.update(q->background.timer, -1);
@@ -125,10 +131,11 @@ void equeue_destroy(equeue_t *q) {
 
 
 // equeue chunk allocation functions
-static struct equeue_event *equeue_mem_alloc(equeue_t *q, size_t size) {
+static struct equeue_event *equeue_mem_alloc(equeue_t *q, size_t size)
+{
     // add event overhead
     size += sizeof(struct equeue_event);
-    size = (size + sizeof(void*)-1) & ~(sizeof(void*)-1);
+    size = (size + sizeof(void *) -1) & ~(sizeof(void *) -1);
 
     equeue_mutex_lock(&q->memlock);
 
@@ -136,7 +143,12 @@ static struct equeue_event *equeue_mem_alloc(equeue_t *q, size_t size) {
     for (struct equeue_event **p = &q->chunks; *p; p = &(*p)->next) {
         if ((*p)->size >= size) {
             struct equeue_event *e = *p;
-            *p = e->next;
+            if (e->sibling) {
+                *p = e->sibling;
+                (*p)->next = e->next;
+            } else {
+                *p = e->next;
+            }
 
             equeue_mutex_unlock(&q->memlock);
             return e;
@@ -159,7 +171,8 @@ static struct equeue_event *equeue_mem_alloc(equeue_t *q, size_t size) {
     return 0;
 }
 
-static void equeue_mem_dealloc(equeue_t *q, struct equeue_event *e) {
+static void equeue_mem_dealloc(equeue_t *q, struct equeue_event *e)
+{
     equeue_mutex_lock(&q->memlock);
 
     // stick chunk into list of chunks
@@ -168,13 +181,20 @@ static void equeue_mem_dealloc(equeue_t *q, struct equeue_event *e) {
         p = &(*p)->next;
     }
 
-    e->next = *p;
+    if (*p && (*p)->size == e->size) {
+        e->sibling = *p;
+        e->next = (*p)->next;
+    } else {
+        e->sibling = 0;
+        e->next = *p;
+    }
     *p = e;
 
     equeue_mutex_unlock(&q->memlock);
 }
 
-void *equeue_alloc(equeue_t *q, size_t size) {
+void *equeue_alloc(equeue_t *q, size_t size)
+{
     struct equeue_event *e = equeue_mem_alloc(q, size);
     if (!e) {
         return 0;
@@ -187,11 +207,12 @@ void *equeue_alloc(equeue_t *q, size_t size) {
     return e + 1;
 }
 
-void equeue_dealloc(equeue_t *q, void *p) {
-    struct equeue_event *e = (struct equeue_event*)p - 1;
+void equeue_dealloc(equeue_t *q, void *p)
+{
+    struct equeue_event *e = (struct equeue_event *)p - 1;
 
     if (e->dtor) {
-        e->dtor(e+1);
+        e->dtor(e + 1);
     }
 
     equeue_mem_dealloc(q, e);
@@ -199,7 +220,8 @@ void equeue_dealloc(equeue_t *q, void *p) {
 
 
 // equeue scheduling functions
-static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
+static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick)
+{
     // setup event and hash local id with buffer offset for unique id
     int id = (e->id << q->npw2) | ((unsigned char *)e - q->buffer);
     e->target = tick + equeue_clampdiff(e->target, tick);
@@ -214,9 +236,21 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
     }
 
     // insert at head in slot
-    e->next = *p;
-    if (e->next) {
-        e->next->ref = &e->next;
+    if (*p && (*p)->target == e->target) {
+        e->next = (*p)->next;
+        if (e->next) {
+            e->next->ref = &e->next;
+        }
+        e->sibling = *p;
+        e->sibling->next = 0;
+        e->sibling->ref = &e->sibling;
+    } else {
+        e->next = *p;
+        if (e->next) {
+            e->next->ref = &e->next;
+        }
+
+        e->sibling = 0;
     }
 
     *p = e;
@@ -224,9 +258,9 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
 
     // notify background timer
     if ((q->background.update && q->background.active) &&
-        (q->queue == e)) {
+            (q->queue == e && !e->sibling)) {
         q->background.update(q->background.timer,
-                equeue_clampdiff(e->target, tick));
+                             equeue_clampdiff(e->target, tick));
     }
 
     equeue_mutex_unlock(&q->queuelock);
@@ -234,56 +268,42 @@ static int equeue_enqueue(equeue_t *q, struct equeue_event *e, unsigned tick) {
     return id;
 }
 
-static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
+static struct equeue_event *equeue_unqueue(equeue_t *q, int id)
+{
     // decode event from unique id and check that the local id matches
     struct equeue_event *e = (struct equeue_event *)
-            &q->buffer[id & ((1 << q->npw2)-1)];
+                             &q->buffer[id & ((1 << q->npw2) - 1)];
 
     equeue_mutex_lock(&q->queuelock);
     if (e->id != id >> q->npw2) {
-        // Invalid id
-        q->nr_cancelled_invalid_ids++;
         equeue_mutex_unlock(&q->queuelock);
         return 0;
-    }
-
-    // Not allowed to cancel periodic events
-    if (e->period != -1)
-    {
-        q->nr_cancelled_periodic_events++;
-        equeue_mutex_unlock(&q->queuelock);
-        return 0;
-    }
-
-    // Find event to unqueue in the pending events list
-    // This works only for single shot events, and periodic events must never be cancelled
-    struct equeue_event *event = q->queue;
-    while (event)
-    {
-        // Check event
-        if (event->id == e->id)
-        {
-            // Cancel event e
-            break;
-        }
-        // Next event
-        event = event->next;
-        // If e is not found in the queued event list then ignore unqueueing
-        if (!event)
-        {
-            equeue_mutex_unlock(&q->queuelock);
-            return 0;
-        }
     }
 
     // clear the event and check if already in-flight
     e->cb = 0;
     e->period = -1;
 
+    int diff = equeue_tickdiff(e->target, q->tick);
+    if (diff < 0 || (diff == 0 && e->generation != q->generation)) {
+        equeue_mutex_unlock(&q->queuelock);
+        return 0;
+    }
+
     // disentangle from queue
-    *e->ref = e->next;
-    if (e->next) {
-        e->next->ref = e->ref;
+    if (e->sibling) {
+        e->sibling->next = e->next;
+        if (e->sibling->next) {
+            e->sibling->next->ref = &e->sibling->next;
+        }
+
+        *e->ref = e->sibling;
+        e->sibling->ref = e->ref;
+    } else {
+        *e->ref = e->next;
+        if (e->next) {
+            e->next->ref = e->ref;
+        }
     }
 
     equeue_incid(q, e);
@@ -292,7 +312,8 @@ static struct equeue_event *equeue_unqueue(equeue_t *q, int id) {
     return e;
 }
 
-static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
+static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target)
+{
     equeue_mutex_lock(&q->queuelock);
 
     // find all expired events and mark a new generation
@@ -324,8 +345,10 @@ static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
         ess = es->next;
 
         struct equeue_event *prev = 0;
-        es->next = prev;
-        prev = es;
+        for (struct equeue_event *e = es; e; e = e->sibling) {
+            e->next = prev;
+            prev = e;
+        }
 
         *tail = prev;
         tail = &es->next;
@@ -334,8 +357,9 @@ static struct equeue_event *equeue_dequeue(equeue_t *q, unsigned target) {
     return head;
 }
 
-int equeue_post(equeue_t *q, void (*cb)(void*), void *p) {
-    struct equeue_event *e = (struct equeue_event*)p - 1;
+int equeue_post(equeue_t *q, void (*cb)(void *), void *p)
+{
+    struct equeue_event *e = (struct equeue_event *)p - 1;
     unsigned tick = equeue_tick();
     e->cb = cb;
     e->target = tick + e->target;
@@ -345,7 +369,8 @@ int equeue_post(equeue_t *q, void (*cb)(void*), void *p) {
     return id;
 }
 
-void equeue_cancel(equeue_t *q, int id) {
+void equeue_cancel(equeue_t *q, int id)
+{
     if (!id) {
         return;
     }
@@ -356,14 +381,36 @@ void equeue_cancel(equeue_t *q, int id) {
     }
 }
 
-void equeue_break(equeue_t *q) {
+int equeue_timeleft(equeue_t *q, int id)
+{
+    int ret = -1;
+
+    if (!id) {
+        return -1;
+    }
+
+    // decode event from unique id and check that the local id matches
+    struct equeue_event *e = (struct equeue_event *)
+                             &q->buffer[id & ((1 << q->npw2) - 1)];
+
     equeue_mutex_lock(&q->queuelock);
-    q->breaks++;
+    if (e->id == id >> q->npw2) {
+        ret = equeue_clampdiff(e->target, equeue_tick());
+    }
+    equeue_mutex_unlock(&q->queuelock);
+    return ret;
+}
+
+void equeue_break(equeue_t *q)
+{
+    equeue_mutex_lock(&q->queuelock);
+    q->break_requested = true;
     equeue_mutex_unlock(&q->queuelock);
     equeue_sema_signal(&q->eventsema);
 }
 
-void equeue_dispatch(equeue_t *q, int ms) {
+void equeue_dispatch(equeue_t *q, int ms)
+{
     unsigned tick = equeue_tick();
     unsigned timeout = tick + ms;
     q->background.active = false;
@@ -389,7 +436,7 @@ void equeue_dispatch(equeue_t *q, int ms) {
                 equeue_enqueue(q, e, equeue_tick());
             } else {
                 equeue_incid(q, e);
-                equeue_dealloc(q, e+1);
+                equeue_dealloc(q, e + 1);
             }
         }
 
@@ -405,11 +452,12 @@ void equeue_dispatch(equeue_t *q, int ms) {
                     equeue_mutex_lock(&q->queuelock);
                     if (q->background.update && q->queue) {
                         q->background.update(q->background.timer,
-                                equeue_clampdiff(q->queue->target, tick));
+                                             equeue_clampdiff(q->queue->target, tick));
                     }
                     q->background.active = true;
                     equeue_mutex_unlock(&q->queuelock);
                 }
+                q->break_requested = false;
                 return;
             }
         }
@@ -428,10 +476,10 @@ void equeue_dispatch(equeue_t *q, int ms) {
         equeue_sema_wait(&q->eventsema, deadline);
 
         // check if we were notified to break out of dispatch
-        if (q->breaks) {
+        if (q->break_requested) {
             equeue_mutex_lock(&q->queuelock);
-            if (q->breaks > 0) {
-                q->breaks--;
+            if (q->break_requested) {
+                q->break_requested = false;
                 equeue_mutex_unlock(&q->queuelock);
                 return;
             }
@@ -445,34 +493,39 @@ void equeue_dispatch(equeue_t *q, int ms) {
 
 
 // event functions
-void equeue_event_delay(void *p, int ms) {
-    struct equeue_event *e = (struct equeue_event*)p - 1;
+void equeue_event_delay(void *p, int ms)
+{
+    struct equeue_event *e = (struct equeue_event *)p - 1;
     e->target = ms;
 }
 
-void equeue_event_period(void *p, int ms) {
-    struct equeue_event *e = (struct equeue_event*)p - 1;
+void equeue_event_period(void *p, int ms)
+{
+    struct equeue_event *e = (struct equeue_event *)p - 1;
     e->period = ms;
 }
 
-void equeue_event_dtor(void *p, void (*dtor)(void *)) {
-    struct equeue_event *e = (struct equeue_event*)p - 1;
+void equeue_event_dtor(void *p, void (*dtor)(void *))
+{
+    struct equeue_event *e = (struct equeue_event *)p - 1;
     e->dtor = dtor;
 }
 
 
 // simple callbacks
 struct ecallback {
-    void (*cb)(void*);
+    void (*cb)(void *);
     void *data;
 };
 
-static void ecallback_dispatch(void *p) {
-    struct ecallback *e = (struct ecallback*)p;
+static void ecallback_dispatch(void *p)
+{
+    struct ecallback *e = (struct ecallback *)p;
     e->cb(e->data);
 }
 
-int equeue_call(equeue_t *q, void (*cb)(void*), void *data) {
+int equeue_call(equeue_t *q, void (*cb)(void *), void *data)
+{
     struct ecallback *e = equeue_alloc(q, sizeof(struct ecallback));
     if (!e) {
         return 0;
@@ -483,7 +536,8 @@ int equeue_call(equeue_t *q, void (*cb)(void*), void *data) {
     return equeue_post(q, ecallback_dispatch, e);
 }
 
-int equeue_call_in(equeue_t *q, int ms, void (*cb)(void*), void *data) {
+int equeue_call_in(equeue_t *q, int ms, void (*cb)(void *), void *data)
+{
     struct ecallback *e = equeue_alloc(q, sizeof(struct ecallback));
     if (!e) {
         return 0;
@@ -495,7 +549,8 @@ int equeue_call_in(equeue_t *q, int ms, void (*cb)(void*), void *data) {
     return equeue_post(q, ecallback_dispatch, e);
 }
 
-int equeue_call_every(equeue_t *q, int ms, void (*cb)(void*), void *data) {
+int equeue_call_every(equeue_t *q, int ms, void (*cb)(void *), void *data)
+{
     struct ecallback *e = equeue_alloc(q, sizeof(struct ecallback));
     if (!e) {
         return 0;
@@ -511,7 +566,8 @@ int equeue_call_every(equeue_t *q, int ms, void (*cb)(void*), void *data) {
 
 // backgrounding
 void equeue_background(equeue_t *q,
-        void (*update)(void *timer, int ms), void *timer) {
+                       void (*update)(void *timer, int ms), void *timer)
+{
     equeue_mutex_lock(&q->queuelock);
     if (q->background.update) {
         q->background.update(q->background.timer, -1);
@@ -522,7 +578,7 @@ void equeue_background(equeue_t *q,
 
     if (q->background.update && q->queue) {
         q->background.update(q->background.timer,
-                equeue_clampdiff(q->queue->target, equeue_tick()));
+                             equeue_clampdiff(q->queue->target, equeue_tick()));
     }
     q->background.active = true;
     equeue_mutex_unlock(&q->queuelock);
@@ -534,33 +590,40 @@ struct equeue_chain_context {
     int id;
 };
 
-static void equeue_chain_dispatch(void *p) {
+static void equeue_chain_dispatch(void *p)
+{
     equeue_dispatch((equeue_t *)p, 0);
 }
 
-static void equeue_chain_update(void *p, int ms) {
+static void equeue_chain_update(void *p, int ms)
+{
     struct equeue_chain_context *c = (struct equeue_chain_context *)p;
     equeue_cancel(c->target, c->id);
 
     if (ms >= 0) {
         c->id = equeue_call_in(c->target, ms, equeue_chain_dispatch, c->q);
     } else {
-        equeue_dealloc(c->target, c);
+        equeue_dealloc(c->q, c);
     }
 }
 
-void equeue_chain(equeue_t *q, equeue_t *target) {
+int equeue_chain(equeue_t *q, equeue_t *target)
+{
     if (!target) {
         equeue_background(q, 0, 0);
-        return;
+        return 0;
     }
 
     struct equeue_chain_context *c = equeue_alloc(q,
-            sizeof(struct equeue_chain_context));
+                                                  sizeof(struct equeue_chain_context));
+    if (!c) {
+        return -1;
+    }
 
     c->q = q;
     c->target = target;
     c->id = 0;
 
     equeue_background(q, equeue_chain_update, c);
+    return 0;
 }
