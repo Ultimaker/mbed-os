@@ -80,6 +80,8 @@ typedef struct equeue {
     equeue_sema_t eventsema;
     equeue_mutex_t queuelock;
     equeue_mutex_t memlock;
+
+    struct equeue_event *executing_events; // Reference to current executing event list
 } equeue_t;
 
 

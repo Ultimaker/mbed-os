@@ -84,6 +84,8 @@ int equeue_create_inplace(equeue_t *q, size_t size, void *buffer)
     q->background.update = 0;
     q->background.timer = 0;
 
+    q->executing_events = 0;
+
     // initialize platform resources
     int err;
     err = equeue_sema_create(&q->eventsema);
@@ -417,12 +419,12 @@ void equeue_dispatch(equeue_t *q, int ms)
 
     while (1) {
         // collect all the available events and next deadline
-        struct equeue_event *es = equeue_dequeue(q, tick);
+        q->executing_events = equeue_dequeue(q, tick);
 
         // dispatch events
-        while (es) {
-            struct equeue_event *e = es;
-            es = e->next;
+        while (q->executing_events) {
+            struct equeue_event *e = q->executing_events;
+            q->executing_events = e->next;
 
             // actually dispatch the callbacks
             void (*cb)(void *) = e->cb;
